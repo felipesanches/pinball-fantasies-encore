@@ -9,16 +9,19 @@ namespace {
 /// opcode in 00 to 3f; the ModR/M byte's middle field after 80 to 83).
 constexpr int kAdd = 0, kOr = 1, kAdc = 2, kSbb = 3, kAnd = 4, kSub = 5, kXor = 6, kCmp = 7;
 /// The six forms each of those comes in (the opcode's low three bits): memory or a register
-/// with a register, a register with memory or a register, the accumulator with a number.
-constexpr int kRmReg8 = 0, kRmReg16 = 1, kRegRm8 = 2, kRegRm16 = 3, kAccImm8 = 4, kAccImm16 = 5;
-/// The eight shifts and rotations (the ModR/M byte's middle field after c0, c1, d0 to d3).
-constexpr int kRol = 0, kRor = 1, kRcl = 2, kRcr = 3, kShl = 4, kShr = 5, kSal = 6, kSar = 7;
-/// After f6 and f7 (1 is a second test).
-constexpr int kTest = 0, kTest1 = 1, kNot = 2, kNeg = 3, kMul = 4, kImul = 5, kDiv = 6, kIdiv = 7;
+/// with a register, a register with memory or a register, the accumulator with a number (5, a
+/// word, is the switch's default).
+constexpr int kRmReg8 = 0, kRmReg16 = 1, kRegRm8 = 2, kRegRm16 = 3, kAccImm8 = 4;
+/// The eight shifts and rotations (the ModR/M byte's middle field after c0, c1, d0 to d3); the
+/// last, 7 (sar), is the switch's default.
+constexpr int kRol = 0, kRor = 1, kRcl = 2, kRcr = 3, kShl = 4, kShr = 5, kSal = 6;
+/// After f6 and f7 (1 is a second test; 7, idiv, is the switch's default).
+constexpr int kTest = 0, kTest1 = 1, kNot = 2, kNeg = 3, kMul = 4, kImul = 5, kDiv = 6;
 /// After fe (the first two only) and ff.
 constexpr int kIncRm = 0, kDecRm = 1, kCallRm = 2, kCallFarRm = 3, kJmpRm = 4, kJmpFarRm = 5, kPushRm = 6;
-/// What a conditional jump tests, from bits 1 to 3 of its opcode; bit 0 turns it round.
-constexpr int kOverflow = 0, kBelow = 1, kZero = 2, kBelowOrZero = 3, kSign = 4, kParity = 5, kLess = 6, kLessOrEqual = 7;
+/// What a conditional jump tests, from bits 1 to 3 of its opcode (7, less or equal, is the
+/// switch's default); bit 0 turns it round.
+constexpr int kOverflow = 0, kBelow = 1, kZero = 2, kBelowOrZero = 3, kSign = 4, kParity = 5, kLess = 6;
 constexpr int kConditionNot = 1;
 /// The ModR/M byte's top two bits: memory with no displacement, a byte's, a word's; or a register.
 constexpr int kModNoDisp = 0, kModDisp8 = 1, kModDisp16 = 2, kModReg = 3;
@@ -179,7 +182,7 @@ u16 Cpu::inc16(u16 v, bool dec) {
   return res;
 }
 
-// op: kRol to kSar. The 80186 takes the count modulo 32.
+// op: kRol to 7 (sar). The 80186 takes the count modulo 32.
 u8 Cpu::shift8(int op, u8 v, int count) {
   count &= 31;
   if (!count) return v;
@@ -193,7 +196,7 @@ u8 Cpu::shift8(int op, u8 v, int count) {
       case kRcr: { const bool n = v & 1; v = static_cast<u8>((v >> 1) | (c ? 0x80 : 0)); c = n; break; }
       case kShl: case kSal: c = v & 0x80; v = static_cast<u8>(v << 1); break;
       case kShr: c = v & 1; v = static_cast<u8>(v >> 1); break;
-      default: c = v & 1; v = static_cast<u8>((v >> 1) | (v & 0x80)); break;  // kSar: the sign bit kept
+      default: c = v & 1; v = static_cast<u8>((v >> 1) | (v & 0x80)); break;  // sar: the sign bit kept
     }
     // The overflow flag is defined for a count of one; this leaves it as the last step's.
     if (op == kRol || op == kRcl || op == kShl || op == kSal) setFlag(OF, ((v & 0x80) != 0) != c);
@@ -219,7 +222,7 @@ u16 Cpu::shift16(int op, u16 v, int count) {
       case kRcr: { const bool n = v & 1; v = static_cast<u16>((v >> 1) | (c ? 0x8000 : 0)); c = n; break; }
       case kShl: case kSal: c = v & 0x8000; v = static_cast<u16>(v << 1); break;
       case kShr: c = v & 1; v = static_cast<u16>(v >> 1); break;
-      default: c = v & 1; v = static_cast<u16>((v >> 1) | (v & 0x8000)); break;  // kSar: the sign bit kept
+      default: c = v & 1; v = static_cast<u16>((v >> 1) | (v & 0x8000)); break;  // sar: the sign bit kept
     }
     if (op == kRol || op == kRcl || op == kShl || op == kSal) setFlag(OF, ((v & 0x8000) != 0) != c);
     else if (op == kRor || op == kRcr) setFlag(OF, ((v ^ (v << 1)) & 0x8000) != 0);
@@ -241,7 +244,7 @@ bool Cpu::condition(int cc) const {
     case kSign: v = flag(SF); break;
     case kParity: v = flag(PF); break;
     case kLess: v = flag(SF) != flag(OF); break;
-    default: v = flag(ZF) || flag(SF) != flag(OF); break;  // kLessOrEqual
+    default: v = flag(ZF) || flag(SF) != flag(OF); break;  // less or equal
   }
   return (cc & kConditionNot) ? !v : v;
 }
@@ -390,7 +393,7 @@ void Cpu::step() {
       case kRegRm8: { const u8 m = fetch8(); const Operand o = modrm(m); const int g = (m >> 3) & 7; const u8 v = alu8(alu, reg8(g), get8(o)); if (alu != kCmp) setReg8(g, v); break; }
       case kRegRm16: { const u8 m = fetch8(); const Operand o = modrm(m); const int g = (m >> 3) & 7; const u16 v = alu16(alu, r[g], get16(o)); if (alu != kCmp) r[g] = v; break; }
       case kAccImm8: { const u8 v = alu8(alu, lo(AX), fetch8()); if (alu != kCmp) setLo(AX, v); break; }
-      default: { const u16 v = alu16(alu, r[AX], fetch16()); if (alu != kCmp) r[AX] = v; break; }  // kAccImm16
+      default: { const u16 v = alu16(alu, r[AX], fetch16()); if (alu != kCmp) r[AX] = v; break; }  // the accumulator with a word
     }
     return;
   }
@@ -667,7 +670,7 @@ void Cpu::step() {
           setHi(AX, static_cast<u8>(a % v));
           break;
         }
-        default: {  // kIdiv
+        default: {  // idiv
           const i16 a = static_cast<i16>(r[AX]);
           const i16 d = static_cast<i8>(v);
           if (!d || a / d > INT8_MAX || a / d < INT8_MIN) throw CpuError("division overflow at " + where());
@@ -695,7 +698,7 @@ void Cpu::step() {
           r[DX] = static_cast<u16>(a % v);
           break;
         }
-        default: {  // kIdiv
+        default: {  // idiv
           const i32 a = static_cast<i32>((u32{r[DX]} << 16) | r[AX]);
           const i32 d = static_cast<i16>(v);
           if (!d || a / d > INT16_MAX || a / d < INT16_MIN) throw CpuError("division overflow at " + where());
