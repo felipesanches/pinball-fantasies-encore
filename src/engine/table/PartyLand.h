@@ -1,10 +1,9 @@
 #pragma once
 // Party Land's own rules (TABLE1.PRG, cs:0000 to cs:2f9a), on the engine the tables share.
 // Party Land is the table the engine is written against: its addresses are the engine's own
-// (the map is the identity), and the rules read them through B(), W() and the like. The names
-// are those of pfr's rewrite of the game (github.com/wanda-phi/pfr: src/table/party.rs and the
-// binds in its assets) where it has the same thing, and the engine's (Names.inc) for what the
-// engine shares; each routine still says where it is in the program ("cs:1126").
+// (the map is the identity), and the rules read them through B(), W() and the like. Its own are
+// named below, what the engine shares in Names.inc; each routine still says where it is in the
+// program ("cs:1126").
 #include "engine/Values.h"
 #include "engine/table/Flow.h"
 
@@ -13,7 +12,7 @@ namespace encore {
 /// Party Land's places and numbers, by its own addresses.
 namespace party {
 
-/// The lights, by their numbers. Where pfr has a row of them, they are numbered in its order.
+/// The lights, by their numbers.
 namespace lights {
 constexpr u8 puke0 = 0x01;  ///< the four lanes at the top, which the flippers move along
 constexpr u8 puke1 = 0x04;
@@ -33,7 +32,7 @@ constexpr u8 skyride2 = 0x0f;
 constexpr u8 duck0 = 0x10;  ///< blink when a duck goes down
 constexpr u8 snack1 = 0x11;
 constexpr u8 duck1 = 0x12;
-constexpr u8 orbit750k = 0x13;  ///< the right orbit's prizes (pfr: PartyRightOrbitScore)
+constexpr u8 orbit750k = 0x13;  ///< the right orbit's prizes
 constexpr u8 snack2 = 0x14;
 constexpr u8 demonHead = 0x15;
 constexpr u8 skyride0 = 0x16;
@@ -225,7 +224,7 @@ constexpr u16 k50000 = 0x01c0;
 constexpr u16 k5000 = 0x01cc;
 }  // namespace points
 
-/// The awards (Engine::award: a tune, a score, a bonus and a script), pfr's effects.
+/// The awards (Engine::award: a tune, a score, a bonus and a script).
 namespace awards {
 constexpr u16 arcadeSideExtraBall = 0x0640;  ///< the arcade's six prizes
 constexpr u16 arcade5M = 0x065d;
@@ -325,7 +324,7 @@ constexpr u16 bonusX = 0x1db9;  ///< "BONUS X8"'s digit
 constexpr u16 multiplier = 0x2238;  ///< the last digit of "YOU HAVE XX BONUS"
 }  // namespace text
 
-/// A piece of a collision mask that comes and goes (pfr's physmap patches): where it goes in
+/// A piece of a collision mask that comes and goes: where it goes in
 /// which mask, the shape of it raised and dropped, and its size.
 struct Gate {
   u16 segment;  ///< the mask's: the playfield's, or the ramps'
@@ -448,9 +447,9 @@ constexpr u16 waitTask = at::waitTask;
 constexpr u16 haltTask = 0x52cc;  ///< does nothing: the script waits for good
 }  // namespace code
 
-/// The routines the table binds, each by its place in the code (cs:). pfr's names, its
-/// RollTrigger, HitTrigger and UopKind without the table's prefix, where it has them (with
-/// Trigger or Step added where timers:: has the name already); the table's hooks, that the
+/// The routines the table binds, each by its place in the code (cs:): the triggers and the
+/// script's steps after what they are (with Trigger or Step added where timers:: has the name
+/// already); the table's hooks, that the
 /// engine calls, and the engine's own routines bound here, by Names.inc's names; else after
 /// what they do. The rules also look back at some of the roll triggers (var::lastTrigger).
 namespace routines {
@@ -481,7 +480,7 @@ constexpr u16 rampSnack = 0x1f92;
 constexpr u16 orbitEntryRight = 0x225d;
 constexpr u16 enter = 0x2264;
 constexpr u16 demon = 0x2299;
-constexpr u16 laneInnerOther = 0x24bc;  ///< the inlane pfr does not name
+constexpr u16 laneInnerOther = 0x24bc;  ///< the other inlane
 constexpr u16 laneInner = 0x24d7;
 constexpr u16 laneOuterOther = 0x24f2;  ///< and the outlane
 constexpr u16 laneOuter = 0x2577;
@@ -505,15 +504,15 @@ constexpr u16 accBonusModeHit = 0x2d69;
 constexpr u16 accBonusCyclones = 0x2d93;
 constexpr u16 secretDropStep = 0x2f6a;
 constexpr u16 extraBall = 0x2f7f;
-constexpr u16 dummy0 = 0x29e7;  ///< cs:29e7: a routine that does nothing (pfr does not name it)
-constexpr u16 dummy1 = 0x29e8;  ///< cs:29e8: a roll trigger that does nothing (pfr: Dummy)
-constexpr u16 duck0 = 0x13ae;  ///< pfr: HitTrigger PartyDuck(0)
-constexpr u16 duck1 = 0x142e;  ///< pfr: HitTrigger PartyDuck(1)
-constexpr u16 duck2 = 0x14ae;  ///< pfr: HitTrigger PartyDuck(2)
-constexpr u16 skyridePuke0 = 0x26ce;  ///< pfr: RollTrigger PartySkyridePuke(0)
-constexpr u16 skyridePuke3 = 0x272b;  ///< pfr: RollTrigger PartySkyridePuke(3)
-constexpr u16 skyridePuke1 = 0x2788;  ///< pfr: RollTrigger PartySkyridePuke(1)
-constexpr u16 skyridePuke2 = 0x27e5;  ///< pfr: RollTrigger PartySkyridePuke(2)
+constexpr u16 dummy0 = 0x29e7;  ///< cs:29e7: a routine that does nothing
+constexpr u16 dummy1 = 0x29e8;  ///< cs:29e8: a roll trigger that does nothing
+constexpr u16 duck0 = 0x13ae;
+constexpr u16 duck1 = 0x142e;
+constexpr u16 duck2 = 0x14ae;
+constexpr u16 skyridePuke0 = 0x26ce;
+constexpr u16 skyridePuke3 = 0x272b;
+constexpr u16 skyridePuke1 = 0x2788;
+constexpr u16 skyridePuke2 = 0x27e5;
 }  // namespace routines
 
 /// Variables the program keeps among its code.
@@ -529,14 +528,14 @@ constexpr int kTableIndex = 0;
 /// Two lights' flags read as one word, both set.
 constexpr u16 kSetPair = 0xffff;
 
-/// Places in the song (var::musicNext), by the tune whose record has them (pfr's JingleBind).
+/// Places in the song (var::musicNext), by the tune whose record has them.
 namespace songAt {
 constexpr u8 plunger = 0x00;
 constexpr u8 main = 0x01;
 constexpr u8 afterAttract = 0x09;  ///< the place after the attract tune's (0x08)
-constexpr u8 megaLaugh = 0x19;  ///< pfr: set_music(0x19), as MEGA LAUGH starts
-constexpr u8 happyHour = 0x2b;  ///< pfr: set_music(0x2b), as HAPPY HOUR starts
-constexpr u8 silence = 0x3e;  ///< pfr: JingleBind::Silence
+constexpr u8 megaLaugh = 0x19;
+constexpr u8 happyHour = 0x2b;
+constexpr u8 silence = 0x3e;
 }  // namespace songAt
 
 /// A tune's priority, held while it plays (var::musicPriority; 0 is none).

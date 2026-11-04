@@ -13,30 +13,30 @@
 namespace encore {
 
 /// A flipper's record (at::flippers, one after another, a side of 0 ends them), by where each
-/// thing is in it; the names after pfr's reading of them (assets/table/flippers.rs).
+/// thing is in it.
 namespace flipperRec {
 constexpr u16 size = 0x3c;
 constexpr u16 side = 0x00;  ///< byte: 1 the right flipper's key, 2 the left's
 constexpr u8 right = 1, left = 2;  ///< its sides
 constexpr int third = 2;  ///< the third, which not every table has
 constexpr u16 pictureStamped = 0x01;  ///< byte: the picture last put into the collision mask
-constexpr u16 x = 0x02, y = 0x04;  ///< where its box is on the playfield (pfr: rect_pos)
+constexpr u16 x = 0x02, y = 0x04;  ///< where its box is on the playfield
 constexpr u16 width = 0x06;  ///< in sixteens of dots
 constexpr u16 rows = 0x08;
-constexpr u16 ballXMin = 0x0a, ballXMax = 0x0c, ballYMin = 0x0e, ballYMax = 0x10;  ///< pfr: ball_bbox
-constexpr u16 originX = 0x12, originY = 0x14;  ///< what it turns round (pfr: origin)
-constexpr u16 upright = 0x16;  ///< ff: it stands upright (pfr: is_vertical)
+constexpr u16 ballXMin = 0x0a, ballXMax = 0x0c, ballYMin = 0x0e, ballYMax = 0x10;
+constexpr u16 originX = 0x12, originY = 0x14;  ///< what it turns round
+constexpr u16 upright = 0x16;  ///< ff: it stands upright
 constexpr u16 maskStep = 0x18;  ///< bytes of its mask from one picture to the next
 constexpr u16 speed = 0x1a, position = 0x1c, picture = 0x1e;  ///< as it moves
-constexpr u16 lastPicture = 0x20;  ///< pfr: quantum_max
-constexpr u16 lastPosition = 0x22;  ///< pfr: pos_max
-constexpr u16 accelHeld = 0x24, accelLetGo = 0x26;  ///< added to the speed each step (pfr: accel_press, accel_release)
-constexpr u16 speedHeldMax = 0x28;  ///< the speed held does not pass (pfr: speed_press_start)
+constexpr u16 lastPicture = 0x20;
+constexpr u16 lastPosition = 0x22;
+constexpr u16 accelHeld = 0x24, accelLetGo = 0x26;  ///< added to the speed each step
+constexpr u16 speedHeldMax = 0x28;  ///< the speed held does not pass
 constexpr u16 pictureDrawn = 0x2c;  ///< the picture as last drawn
 constexpr u16 backLists = 0x30;  ///< the lists that turn it back, walked down from here
 constexpr u16 drawnAt = 0x34;  ///< where in video memory it was last drawn
-constexpr u16 lists = 0x36;  ///< and those that turn it on, each listSize long (pfr: copy_list_ptr)
-constexpr u16 listSize = 0x38;  ///< pfr: copy_list_stride
+constexpr u16 lists = 0x36;  ///< and those that turn it on, each listSize long
+constexpr u16 listSize = 0x38;
 constexpr u16 masks = 0x3a;  ///< the segment of its pictures for the collision mask
 }  // namespace flipperRec
 
@@ -79,12 +79,12 @@ namespace lightRec {
 constexpr u16 firstColour = 0, bytes = 1, colours = 2;
 }  // namespace lightRec
 
-/// A sound effect's record (pfr's Sfx): the sample, its note, then the channel less one at 3.
+/// A sound effect's record: the sample, its note, then the channel less one at 3.
 namespace soundRec {
 constexpr u16 sample = 0, note = 1, channel = 3;
 }  // namespace soundRec
 
-/// A tune's record (pfr's Jingle): where in the song, how many times, at what priority.
+/// A tune's record: where in the song, how many times, at what priority.
 namespace tuneRec {
 constexpr u16 place = 0, repeats = 1, priority = 2;
 }  // namespace tuneRec
@@ -99,7 +99,7 @@ constexpr u16 score = 0, bonus = 12, script = 24;
 namespace slopeRec {
 constexpr u16 size = 4;
 constexpr u16 pullX = 0, pullY = 2;
-constexpr u16 lowAngle = 3;  ///< taken from the pull down every slope when the table lies low (pfr: accel.1 -= 3)
+constexpr u16 lowAngle = 3;  ///< taken from the pull down every slope when the table lies low
 constexpr u8 number = 0x0f;  ///< a slope's number, in the low bits of a byte of the slopes' mask
 }  // namespace slopeRec
 
@@ -143,15 +143,15 @@ namespace scrollKey {
 constexpr u8 f11 = 0x0b, f12 = 0x0c;
 }  // namespace scrollKey
 
-/// The materials, by the three bits the masks give where the ball touches (pfr's Material):
+/// The materials, by the three bits the masks give where the ball touches:
 /// a mark, a wall, a slope's mask.
 namespace material {
 constexpr u8 markBit = 1, wallBit = 2, slopeBit = 4;
-constexpr u8 flipper = 2;  ///< pfr: MATERIAL_FLIPPER
+constexpr u8 flipper = 2;
 constexpr u8 kicker = 3;   ///< MATERIAL_KICKER
 constexpr u8 bumper = 7;   ///< MATERIAL_BUMPER
 constexpr u16 size = 16;  ///< a material's record (at::materials)
-constexpr u16 minBounceSpeed = 6;  ///< the speed in it (pfr: min_bounce_speed)
+constexpr u16 minBounceSpeed = 6;  ///< the speed in it
 }  // namespace material
 
 /// Which set of masks the ball is on (at::layer).
@@ -190,9 +190,9 @@ constexpr u16 line = 0x150;  ///< a line of the 13-dot font, a row down from the
 constexpr u16 paused = 0x162;  ///< GAME PAUSED, in the middle of that line
 constexpr u16 score = 0xc8;  ///< the score in its large digits
 constexpr u16 bigScore = 0xa0;  ///< the same, further left, for the script's dmBigScore
-constexpr u16 bonus = 0x488;  ///< the bonus as it is counted, in the 8-dot font (pfr: x -32, y 6)
+constexpr u16 bonus = 0x488;  ///< the bonus as it is counted, in the 8-dot font
 constexpr u16 bonusClear = 0x498;  ///< and what is cleared when it is
-constexpr u16 matchDigits = 0x540;  ///< the match's digits, 0 to 9, eight bytes apart (pfr: y 7)
+constexpr u16 matchDigits = 0x540;  ///< the match's digits, 0 to 9, eight bytes apart
 constexpr u16 countdownSeconds = 0x240;  ///< a mode's count-down, in the 11-dot font
 constexpr u16 countdownScore = 0x158;  ///< and its score beside it, in the 13-dot
 constexpr u16 longMsgPlace = 0x2a0;  ///< the long message's place, as the program starts (cs:6e7c)
@@ -202,7 +202,7 @@ constexpr u8 notDrawn = 0xcc;  ///< at::numberDrawn: a digit no digit is, so tha
 constexpr u8 scoreNotDrawn = 0x12;  ///< at::scoreDrawn: the same
 constexpr u8 unchanged = 0xff;  ///< at::numberShown: the digit is left as it is
 constexpr u8 longMsgEnd = 0xff;  ///< ends a long message
-constexpr u8 animSkip = 0x7f;  ///< an animation's byte that only moves on (pfr: 0xfe)
+constexpr u8 animSkip = 0x7f;  ///< an animation's byte that only moves on
 }  // namespace display
 
 /// An animation of the display's (cs:6fb5), by where things are from its first frame: before
@@ -213,7 +213,7 @@ constexpr u16 back = 6, rounds = 4, end = 2;  ///< before the first frame
 constexpr u16 frameTime = 2;  ///< in a frame, after where its dots are
 }  // namespace animRec
 
-/// The display's four fonts (setFont), by their height (pfr: DmFont).
+/// The display's four fonts (setFont), by their height.
 namespace font {
 constexpr int h13 = 0, h11 = 1, h8 = 2, h5 = 3;
 }  // namespace font

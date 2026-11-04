@@ -1,9 +1,7 @@
 #pragma once
 // Stones 'n Bones' own rules (TABLE4.PRG, cs:0000 to cs:3746), on the engine the tables
-// share. Addresses here are this table's own, and named below. The names are those of pfr's
-// rewrite of the game (github.com/wanda-phi/pfr: src/table/stones.rs and the binds in its
-// assets) where it has the same thing, and the engine's (Names.inc) for what the engine
-// shares; each routine still says where it is in the program ("cs:1c68").
+// share. Addresses here are this table's own, and named below; what the engine shares has the
+// engine's names (Names.inc). Each routine still says where it is in the program ("cs:1c68").
 #include <initializer_list>
 
 #include "engine/Values.h"
@@ -46,8 +44,8 @@ constexpr u8 kickback = 0x2c;
 namespace var {
 // --- the table's own
 constexpr u16 screamsTarget = 0x01ea;  ///< word: the screams that light the next prize (10, 20...)
-constexpr u16 screams = 0x01ec;  ///< word: trips up the SCREAMS ramp (pfr: num_cyclone)
-constexpr u16 screamsDigits = 0x01ee;  ///< 12 digits: the same number (pfr: NumCyclone, CycloneIncr)
+constexpr u16 screams = 0x01ec;  ///< word: trips up the SCREAMS ramp
+constexpr u16 screamsDigits = 0x01ee;  ///< 12 digits: the same number
 constexpr u16 screamsBonus = 0x01fa;  ///< 12 digits: what they add to the bonus, at the end of the ball
 constexpr u16 matchWon = 0x0206;
 constexpr u16 keyBlinking = 0x0207;  ///< all three KEY lanes made: they blink
@@ -198,9 +196,6 @@ constexpr u16 screamsTarget = 0x41;  ///< word
 
 /// The eight ghosts, as the table at ds:0305 has them: seven bytes each, the light, the
 /// routine run when the ghost is collected, its award then, and the award when it is lit.
-/// (pfr: the awards StonesGhostLit0 to 7, and StonesGhost5M, StonesGhostTowerHunt,
-/// StonesGhostExtraBall, StonesGhost10M, StonesGhostGhostHunter, StonesGhostDemon, StonesGhost15M
-/// and StonesGhostGrimReaper, in this table's order.)
 namespace ghosts {
 constexpr u16 table = 0x0305;
 constexpr u16 size = 7;
@@ -233,7 +228,7 @@ constexpr u16 k1 = 0x089c;
 constexpr u16 k100000 = 0x08a8;
 }  // namespace points
 
-/// The awards (Engine::award: a tune, a score, a bonus and a script), pfr's effects.
+/// The awards (Engine::award: a tune, a score, a bonus and a script).
 namespace awards {
 constexpr u16 lock = 0x033d;
 constexpr u16 stonesBonesAllRedundant = 0x0376;  ///< all nine down, a ghost already waiting
@@ -262,7 +257,7 @@ constexpr u16 millionPlus = 0x074c;
 constexpr u16 vault = 0x0768;
 constexpr u16 well = 0x0784;
 constexpr u16 towerBonus = 0x07a0;
-constexpr u16 wellMultiBonus = 0x07bc;  ///< for 2, then 4 to 10, each 0x1c on (pfr: StonesWellMb2 to Mb10)
+constexpr u16 wellMultiBonus = 0x07bc;  ///< for 2, then 4 to 10, each 0x1c on
 constexpr u16 wellMultiBonusSize = 0x1c;
 constexpr u16 screamsToExtraBall = 0x0848;
 constexpr u16 screamsTo5M = 0x0864;
@@ -290,7 +285,7 @@ constexpr u16 tilt = 0x08fe;
 constexpr u16 matchWon = 0x090d;
 constexpr u16 match = 0x0910;
 constexpr u16 towerHuntEnd = 0x094f;
-constexpr u16 modeEnd = 0x095b;  ///< pfr: ModeEndHit and ModeEndRamp, one record
+constexpr u16 modeEnd = 0x095b;
 }  // namespace tunes
 
 /// Display scripts the rules start.
@@ -376,21 +371,21 @@ constexpr Timer unblinkRipAll{0x2afb, 0x3bcc};
 constexpr Timer screamExtra{0x2f48, 0x3bd4};
 constexpr u16 grimReaper = 0x35b5;  ///< these two wait for the mode running to be over
 constexpr u16 ghostHunter = 0x35da;
-constexpr Timer unblinkBone0{0x1082, 0x3ba2};  ///< pfr: StonesUnblinkBone(0)
-constexpr Timer unblinkBone1{0x10fe, 0x3ba4};  ///< pfr: StonesUnblinkBone(1)
-constexpr Timer unblinkBone2{0x117a, 0x3ba6};  ///< pfr: StonesUnblinkBone(2)
-constexpr Timer unblinkBone3{0x11f6, 0x3ba8};  ///< pfr: StonesUnblinkBone(3)
-constexpr Timer unblinkStone0{0x1272, 0x3baa};  ///< pfr: StonesUnblinkStone(0)
-constexpr Timer unblinkStone1{0x12ee, 0x3bac};  ///< pfr: StonesUnblinkStone(1)
-constexpr Timer unblinkStone2{0x136a, 0x3bae};  ///< pfr: StonesUnblinkStone(2)
-constexpr Timer unblinkStone3{0x13e6, 0x3bb0};  ///< pfr: StonesUnblinkStone(3)
-constexpr Timer unblinkStone4{0x1462, 0x3bb2};  ///< pfr: StonesUnblinkStone(4)
-constexpr Timer unblinkKey0{0x18af, 0x3bb8};  ///< pfr: StonesUnblinkKey(0)
-constexpr Timer unblinkKey1{0x19bc, 0x3bba};  ///< pfr: StonesUnblinkKey(1)
-constexpr Timer unblinkKey2{0x1ac9, 0x3bbc};  ///< pfr: StonesUnblinkKey(2)
-constexpr Timer unblinkRip0{0x2be1, 0x3bce};  ///< pfr: StonesUnblinkRip(0)
-constexpr Timer unblinkRip1{0x2ca0, 0x3bd0};  ///< pfr: StonesUnblinkRip(1)
-constexpr Timer unblinkRip2{0x2d5f, 0x3bd2};  ///< pfr: StonesUnblinkRip(2)
+constexpr Timer unblinkBone0{0x1082, 0x3ba2};
+constexpr Timer unblinkBone1{0x10fe, 0x3ba4};
+constexpr Timer unblinkBone2{0x117a, 0x3ba6};
+constexpr Timer unblinkBone3{0x11f6, 0x3ba8};
+constexpr Timer unblinkStone0{0x1272, 0x3baa};
+constexpr Timer unblinkStone1{0x12ee, 0x3bac};
+constexpr Timer unblinkStone2{0x136a, 0x3bae};
+constexpr Timer unblinkStone3{0x13e6, 0x3bb0};
+constexpr Timer unblinkStone4{0x1462, 0x3bb2};
+constexpr Timer unblinkKey0{0x18af, 0x3bb8};
+constexpr Timer unblinkKey1{0x19bc, 0x3bba};
+constexpr Timer unblinkKey2{0x1ac9, 0x3bbc};
+constexpr Timer unblinkRip0{0x2be1, 0x3bce};
+constexpr Timer unblinkRip1{0x2ca0, 0x3bd0};
+constexpr Timer unblinkRip2{0x2d5f, 0x3bd2};
 }  // namespace timers
 
 /// Routines the rules point at: the display's tasks, and the engine's own.
@@ -402,9 +397,9 @@ constexpr u16 waitTask = 0x5a31;
 constexpr u16 nothingTask = 0x5a78;
 }  // namespace code
 
-/// The routines the table binds, each by its place in the code (cs:). pfr's names, its
-/// RollTrigger, HitTrigger and UopKind without the table's prefix, where it has them (with
-/// Trigger or Step added where timers:: has the name already); the table's hooks, that the
+/// The routines the table binds, each by its place in the code (cs:): the triggers and the
+/// script's steps after what they are (with Trigger or Step added where timers:: has the name
+/// already); the table's hooks, that the
 /// engine calls, by Names.inc's names; else after what they do.
 namespace routines {
 // --- the hooks
@@ -460,7 +455,7 @@ constexpr u16 setFlagModeRamp = 0x078f;
 constexpr u16 clearFlagModeRamp = 0x07a3;
 constexpr u16 setFlagModeHit = 0x07b7;
 constexpr u16 clearFlagModeHit = 0x07cb;
-constexpr u16 matchBegin = 0x07f4;  ///< (pfr's Match is cs:07df, which comes here)
+constexpr u16 matchBegin = 0x07f4;  ///< cs:07df comes here
 constexpr u16 endMode = 0x1fd6;
 constexpr u16 towerEjectStep = 0x2106;
 constexpr u16 wellEjectStep = 0x233b;
@@ -481,24 +476,24 @@ constexpr u16 multiplyBonus = 0x35ff;
 constexpr u16 accBonusModeRamp = 0x3657;
 constexpr u16 dmTowerHunt = 0x3681;
 constexpr u16 extraBall = 0x3732;
-constexpr u16 dummy0 = 0x1783;  ///< cs:1783: three roll triggers that do nothing (pfr: Dummy)
+constexpr u16 dummy0 = 0x1783;  ///< cs:1783: three roll triggers that do nothing
 constexpr u16 dummy1 = 0x23c9;  ///< cs:23c9
 constexpr u16 dummy2 = 0x29f6;  ///< cs:29f6
-constexpr u16 bone0 = 0x103e;  ///< pfr: HitTrigger StonesBone(0)
-constexpr u16 bone1 = 0x10ba;  ///< pfr: HitTrigger StonesBone(1)
-constexpr u16 bone2 = 0x1136;  ///< pfr: HitTrigger StonesBone(2)
-constexpr u16 bone3 = 0x11b2;  ///< pfr: HitTrigger StonesBone(3)
-constexpr u16 stone0 = 0x122e;  ///< pfr: HitTrigger StonesStone(0)
-constexpr u16 stone1 = 0x12aa;  ///< pfr: HitTrigger StonesStone(1)
-constexpr u16 stone2 = 0x1326;  ///< pfr: HitTrigger StonesStone(2)
-constexpr u16 stone3 = 0x13a2;  ///< pfr: HitTrigger StonesStone(3)
-constexpr u16 stone4 = 0x141e;  ///< pfr: HitTrigger StonesStone(4)
-constexpr u16 key0 = 0x17cd;  ///< pfr: RollTrigger StonesKey(0)
-constexpr u16 key1 = 0x18da;  ///< pfr: RollTrigger StonesKey(1)
-constexpr u16 key2 = 0x19e7;  ///< pfr: RollTrigger StonesKey(2)
-constexpr u16 rip0 = 0x2b5a;  ///< pfr: RollTrigger StonesRip(0)
-constexpr u16 rip1 = 0x2c19;  ///< pfr: RollTrigger StonesRip(1)
-constexpr u16 rip2 = 0x2cd8;  ///< pfr: RollTrigger StonesRip(2)
+constexpr u16 bone0 = 0x103e;
+constexpr u16 bone1 = 0x10ba;
+constexpr u16 bone2 = 0x1136;
+constexpr u16 bone3 = 0x11b2;
+constexpr u16 stone0 = 0x122e;
+constexpr u16 stone1 = 0x12aa;
+constexpr u16 stone2 = 0x1326;
+constexpr u16 stone3 = 0x13a2;
+constexpr u16 stone4 = 0x141e;
+constexpr u16 key0 = 0x17cd;
+constexpr u16 key1 = 0x18da;
+constexpr u16 key2 = 0x19e7;
+constexpr u16 rip0 = 0x2b5a;
+constexpr u16 rip1 = 0x2c19;
+constexpr u16 rip2 = 0x2cd8;
 }  // namespace routines
 
 /// Variables the program keeps among its code.
@@ -518,7 +513,7 @@ constexpr int kTableIndex = 3;
 /// What var::scoreDrawn's digits are set to (no digit has it), so that each is drawn again.
 constexpr u8 kScoreUndrawn = 0x12;
 
-/// Places in the song (var::musicNext): the tunes' records' (tunes::, pfr's JingleBind), and
+/// Places in the song (var::musicNext): the tunes' records', and
 /// those no record has.
 namespace songAt {
 constexpr u8 plunger = 0;  ///< tunes::plunger's
@@ -527,7 +522,7 @@ constexpr u8 afterMode = 3;  ///< where the music goes as a mode ends
 constexpr u8 afterAttract = 9;  ///< and after the tune while nobody plays
 constexpr u8 towerHunt = 0x2e;  ///< the tower hunt's, a place on for each of its prizes,
 constexpr u8 towerHuntLast = 0x32;  ///< up to this one
-constexpr u8 silence = 0x34;  ///< pfr: JingleBind::Silence (ds:08ec)
+constexpr u8 silence = 0x34;  ///< ds:08ec
 }  // namespace songAt
 
 /// The display's fonts, as setFont takes them.

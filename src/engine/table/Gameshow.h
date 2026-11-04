@@ -1,9 +1,8 @@
 #pragma once
 // Billion Dollar Gameshow's own rules (TABLE3.PRG, cs:0000 to cs:2228), on the engine the
-// tables share. Addresses here are this table's own, and named below. The names are those of
-// pfr's rewrite of the game (github.com/wanda-phi/pfr: src/table/show.rs and the binds in its
-// assets) where it has the same thing, and the engine's (Names.inc) for what the engine
-// shares; each routine still says where it is in the program ("cs:1342").
+// tables share. Addresses here are this table's own, and named below; what the engine shares
+// has the engine's names (Names.inc). Each routine still says where it is in the program
+// ("cs:1342").
 #include <array>
 
 #include "engine/Values.h"
@@ -77,10 +76,10 @@ constexpr u16 prizeSet1 = 0x01be;  ///< ff: the first row of three taken,
 constexpr u16 prizeSet2 = 0x01bf;  ///< and the second
 constexpr u16 multiBonusStep = 0x01c0;  ///< 0 to 6, the multipliers given (lights::bonus on)
 constexpr u16 multiBonusTimes = 0x01c1;  ///< the six multipliers: 2, 3, 4, 6, 8, 10
-constexpr u16 multiBonusScripts = 0x01c7;  ///< words: the script that shows each (pfr: ShowMbX2 to X10)
+constexpr u16 multiBonusScripts = 0x01c7;  ///< words: the script that shows each
 constexpr u16 playerRecords = 0x0263;  ///< the eight players' records, rec::size apart (see rec)
-constexpr u16 skills = 0x03a3;  ///< word: trips up the skills ramp (pfr: num_cyclone)
-constexpr u16 skillsDigits = 0x03a5;  ///< 12 digits: the same number (pfr: NumCyclone, CycloneIncr)
+constexpr u16 skills = 0x03a3;  ///< word: trips up the skills ramp
+constexpr u16 skillsDigits = 0x03a5;  ///< 12 digits: the same number
 constexpr u16 skillsBonus = 0x03b1;  ///< 12 digits: what they add to the bonus, at the end of the ball
 constexpr u16 matchWon = 0x03bd;
 constexpr u16 jackpot = 0x0617;  ///< 12 digits, the score of awards::jackpot
@@ -151,7 +150,7 @@ constexpr u16 k1 = 0x01d3;
 constexpr u16 k100000 = 0x01df;
 }  // namespace points
 
-/// The awards (Engine::award: a tune, a score, a bonus and a script), pfr's effects.
+/// The awards (Engine::award: a tune, a score, a bonus and a script).
 namespace awards {
 constexpr u16 cashpotLock = 0x03be;
 constexpr u16 billion = 0x03da;
@@ -218,7 +217,7 @@ constexpr u16 plunger = 0x08de;  ///< the same record
 constexpr u16 attract = 0x08e1;
 constexpr u16 multiBonus = 0x08e8;
 constexpr u16 jackpot = 0x08eb;
-constexpr u16 modeEnd = 0x08fd;  ///< pfr: ModeEndHit and ModeEndRamp, one record
+constexpr u16 modeEnd = 0x08fd;
 constexpr u16 extraBallLit = 0x0918;
 constexpr u16 prizeIncoming = 0x091e;
 }  // namespace tunes
@@ -251,29 +250,29 @@ constexpr u16 multiplier = 0x1cf7;  ///< the two of "XX BONUS"
 }  // namespace text
 
 /// A piece of a collision mask that comes and goes: where in the mask, and the shape put there
-/// open and shut (pfr's physmaps); then its width in bytes, its rows, and the bytes from one of
+/// open and shut; then its width in bytes, its rows, and the bytes from one of
 /// its rows to the next in the shape. The last two keep three rows of bytes to each row of the
-/// mask, of which the middle one is put there (pfr: skip3): a step of three widths, from one
+/// mask, of which the middle one is put there: a step of three widths, from one
 /// width on.
 struct Shape {
   u16 at, open, shut;
   u16 width, rows, step;
 };
 namespace shapes {
-constexpr Shape vaultEntry{0x0f00, 0x6190, 0x61e0, 3, 0x19, 3};  ///< pfr: ShowGateVaultEntry (the ramps' mask)
-constexpr Shape plungerGate{0x2fcb, 0x6230, 0x6280, 2, 0x22, 2};  ///< pfr: ShowGatePlunger
-constexpr Shape rampRightGate{0x198e, 0x6390, 0x6480, 4, 0x14, 12};  ///< pfr: ShowGateRampRight (the ramps' mask)
-constexpr Shape vaultExit{0x4fd8, 0x6570, 0x6620, 4, 0x0e, 12};  ///< pfr: ShowGateVaultExit
+constexpr Shape vaultEntry{0x0f00, 0x6190, 0x61e0, 3, 0x19, 3};  ///< the ramps' mask
+constexpr Shape plungerGate{0x2fcb, 0x6230, 0x6280, 2, 0x22, 2};
+constexpr Shape rampRightGate{0x198e, 0x6390, 0x6480, 4, 0x14, 12};  ///< the ramps' mask
+constexpr Shape vaultExit{0x4fd8, 0x6570, 0x6620, 4, 0x0e, 12};
 }  // namespace shapes
 /// A target that drops: where in the mask, its shape down and up, and its width.
 struct TargetShape {
   u16 at, down, up, width;
 };
 namespace targetShapes {
-constexpr TargetShape dropCenter0{0x2389, 0x62d0, 0x6370, 2};  ///< pfr: ShowHitCenter0
-constexpr TargetShape dropCenter1{0x26a9, 0x62f0, 0x6360, 1};  ///< pfr: ShowHitCenter1
-constexpr TargetShape dropLeft0{0x2994, 0x6300, 0x6350, 1};  ///< pfr: ShowHitLeft0
-constexpr TargetShape dropLeft1{0x2cb3, 0x6310, 0x6330, 2};  ///< pfr: ShowHitLeft1
+constexpr TargetShape dropCenter0{0x2389, 0x62d0, 0x6370, 2};
+constexpr TargetShape dropCenter1{0x26a9, 0x62f0, 0x6360, 1};
+constexpr TargetShape dropLeft0{0x2994, 0x6300, 0x6350, 1};
+constexpr TargetShape dropLeft1{0x2cb3, 0x6310, 0x6330, 2};
 }  // namespace targetShapes
 
 /// Where the ball is put.
@@ -315,9 +314,9 @@ constexpr u16 waitTask = 0x4513;
 constexpr u16 nothingTask = 0x455a;
 }  // namespace code
 
-/// The routines the table binds, each by its place in the code (cs:). pfr's names, its
-/// RollTrigger, HitTrigger and UopKind without the table's prefix, where it has them (with
-/// Trigger or Step added where timers:: has the name already); the table's hooks, that the
+/// The routines the table binds, each by its place in the code (cs:): the triggers and the
+/// script's steps after what they are (with Trigger or Step added where timers:: has the name
+/// already); the table's hooks, that the
 /// engine calls, by Names.inc's names; else after what they do. The rules also look back at
 /// some of the roll triggers (var::lastTrigger).
 namespace routines {
@@ -350,7 +349,7 @@ constexpr u16 orbitLeft = 0x18d6;
 constexpr u16 orbitRight = 0x19bd;
 constexpr u16 rampSkillMark = 0x1a66;
 constexpr u16 rampSkill = 0x1a67;
-constexpr u16 laneOuterOther = 0x1cd9;  ///< the outlane pfr does not name
+constexpr u16 laneOuterOther = 0x1cd9;  ///< the other outlane
 constexpr u16 laneOuter = 0x1cf4;
 constexpr u16 laneInnerOther = 0x1d0f;  ///< and the inlane
 constexpr u16 laneInner = 0x1d2a;
@@ -377,13 +376,13 @@ constexpr u16 jump = 0x214a;
 constexpr u16 accBonusCyclones = 0x215b;  ///< (here, the trips up the skills ramp)
 constexpr u16 extraBall = 0x2211;
 constexpr u16 incCashpotOther = 0x1f85;  ///< cs:1f85: the cashpot up by 227,830; what calls it is not known
-constexpr u16 dummy0 = 0x20a3;  ///< cs:20a3: does nothing (pfr does not name it)
+constexpr u16 dummy0 = 0x20a3;  ///< cs:20a3: does nothing
 constexpr u16 dummy1 = 0x2155;  ///< cs:2155: does nothing
-constexpr u16 stayStep = 0x2156;  ///< cs:2156: a step the script stays on (pfr does not name it)
-constexpr u16 dropCenter0 = 0x0deb;  ///< pfr: HitTrigger ShowCenter(0)
-constexpr u16 dropCenter1 = 0x0e2b;  ///< pfr: HitTrigger ShowCenter(1)
-constexpr u16 dropLeft0 = 0x0ea1;  ///< pfr: HitTrigger ShowLeft(0)
-constexpr u16 dropLeft1 = 0x0ee1;  ///< pfr: HitTrigger ShowLeft(1)
+constexpr u16 stayStep = 0x2156;  ///< cs:2156: a step the script stays on
+constexpr u16 dropCenter0 = 0x0deb;
+constexpr u16 dropCenter1 = 0x0e2b;
+constexpr u16 dropLeft0 = 0x0ea1;
+constexpr u16 dropLeft1 = 0x0ee1;
 }  // namespace routines
 
 /// Variables the program keeps among its code.
@@ -419,9 +418,9 @@ constexpr u8 tv = 0, trip = 1, car = 2, plane = 4, house = 5, boat = 6;
 namespace songAt {
 constexpr u8 plunger = 0x00;  ///< tunes::plunger's (and tunes::gameStart's)
 constexpr u8 main = 0x01;  ///< tunes::main's
-constexpr u8 afterMode = 0x03;  ///< after a mode's end: the main music past its opening (pfr: set_music(3))
+constexpr u8 afterMode = 0x03;  ///< after a mode's end: the main music past its opening
 constexpr u8 afterAttract = 0x09;  ///< after the tune while nobody plays
-constexpr u8 silence = 0x37;  ///< pfr's Silence (ds:08ad)
+constexpr u8 silence = 0x37;  ///< ds:08ad
 }  // namespace songAt
 }  // namespace show
 
@@ -476,8 +475,8 @@ class Gameshow : public Flow {
   void serveMusic() override { music(show::tunes::plunger); }
   void sameBallAgain() override;
 
-  // --- the pieces of the collision masks that come and go (cs:0d0f to cs:0dea), pfr's
-  // physmaps: open is the second shape (dropped), shut the first (raised)
+  // --- the pieces of the collision masks that come and go (cs:0d0f to cs:0dea):
+  // open is the second shape (dropped), shut the first (raised)
   static constexpr u16 kMask = 0x2aef + kLoadSegment, kUpperMask = 0x362f + kLoadSegment;  ///< the playfield's, and the ramps'
   /// The door into the vault.
   void vaultEntry(bool open) {

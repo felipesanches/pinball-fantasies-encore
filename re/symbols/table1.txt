@@ -14,12 +14,12 @@ i 46b4 wallsRamps
 i 7734 marksRamps
 i 7194 slopesGround             ; each stretch of eight dots: the slope it lies on, in its low four bits
 i 7cd4 slopesRamps
-i 2f94 coverGround              ; where the picture hides the ball (pfr: occmaps)
+i 2f94 coverGround              ; where the picture hides the ball
 i 358c coverRamps               ; the same on the ramps, further on in the same memory
 i 4c54 leftFlipperMasks         ; a flipper's pictures in the collision mask, one for each way it stands
 i 4fc2 rightFlipperMasks
 i 4eb6 thirdFlipperMasks
-i 8274 flipperPieces            ; pieces of the flippers' pictures, copied to video memory at d4f4 (pfr: glut)
+i 8274 flipperPieces            ; pieces of the flippers' pictures, copied to video memory at d4f4
 i 82e2 plungerPicture
 i 5224 tablePicture1            ; the table's picture, in four strips
 i 5947 tablePicture2
@@ -64,7 +64,7 @@ d 2f0a thirdWithBall            ; ff: and the third flipper
 d 2f0b thirdMidFrame            ; ff: the third flipper is drawn in the mid-frame callback
 d 2f00 displayLine              ; the screen line the display begins at
 d 2f02 screenTop                ; the row of the table at the top of the screen, less 21h
-d 2f04 scrollFixed              ; where the screen is, in sixteenths of a row (pfr: raw_pos_f4)
+d 2f04 scrollFixed              ; where the screen is, in sixteenths of a row
 d 23ac scrollSpeed              ; how quickly the screen follows the ball
 d 3718 attractScroll            ; 1 or -1: the way the screen drifts while no game is played
 
@@ -97,15 +97,15 @@ d 239b bumperPending
 d 239d bumperRecord
 d 2eda touchedMaterial          ; the three masks' bits under the last point that touched
 d 67e0 probePoints              ; the 44 points round the ball: x and y, words, from the ball's corner
-d 231b materials                ; eight of 16 bytes, by the three masks' bits (pfr: MATERIALS)
+d 231b materials                ; eight of 16 bytes, by the three masks' bits
 d 6898 materialGain             ; the material touched, copied from materials: what slip the speed along it takes
 d 689a materialSpinGain         ; and what slip the spin takes
-d 689c bounceFactor             ; this and the next two: pfr's Material
+d 689c bounceFactor             ; this and the next two: a material's
 d 689e minBounceSpeed
 d 68a0 maxBounceAngle
 d 68a2 speedMin                 ; the slowest and the fastest the ball may go, either way
 d 68a4 speedMax
-d 68a6 bumperSpeedBoost         ; this and the next four: pfr's names
+d 68a6 bumperSpeedBoost         ; this and the next four: the bumpers' and kickers' push
 d 68a8 kickerSpeedBoost
 d 68aa kickerSpeedThreshold
 d 68ac pushSpeedAttack          ; the table rising while the space bar is held
@@ -113,7 +113,7 @@ d 68ae pushSpeedRelease         ; and settling when it is let go
 d 4600 sines                    ; 0a00 words, of 14 bits, kept high byte first
 d 4a00 cosines                  ; the same table, a quarter turn on
 d 6950 flippers                 ; three of 3ch bytes; the first byte 1 right, 2 left, 0 none
-d 248a flipperQuanta            ; a flipper's place to which of its pictures it shows (pfr: quantum)
+d 248a flipperQuanta            ; a flipper's place to which of its pictures it shows
 d 0cf3 bumpers                  ; rectangles, each with its record: noise, then score
 d 0d1b kickers
 d 0d71 hitTriggerList           ; rectangles touched, each with its routine
@@ -121,7 +121,7 @@ d 0d9b rollTriggersGround       ; rectangles rolled into, each with its routine
 d 0e29 rollTriggersRamps
 d 0ea3 rollTriggersGroundTilted
 d 0ec3 rollTriggersRampsTilted
-d 0ec5 transitionsDown          ; rectangles in which the ball leaves the ramps (pfr's name)
+d 0ec5 transitionsDown          ; rectangles in which the ball leaves the ramps
 d 0f17 transitionsUp            ; and goes onto them
 d 239f marksRampsCopy           ; where in video memory the three masks are copied
 d 23a1 slopesRampsCopy
@@ -147,7 +147,7 @@ d 23a5 plungerPull              ; how far the plunger is pulled, up to 20h
 d 23a6 plungerShown             ; which of its pictures it shows
 c 5e0d plungerPulling           ; plungerRoutine while it is pulled or at rest
 c 5e6a plungerLetGo             ; and when it is let go
-d 338b flipperPressed           ; ff: a flipper's key went down (pfr's name)
+d 338b flipperPressed           ; ff: a flipper's key went down
 d 2310 spaceHeld                ; ff while the space bar is held: the table rises
 v 3477 nudgeHeld                ; ff: the space bar has shaken the table, until it is let go
 v 3476 keyDown                  ; set to 0f as a key goes down; nothing reads it
@@ -163,7 +163,7 @@ v 3a10 pauseQuit                ; set when the pause is left by quitting; nothin
 d 3654 scancodeLetters          ; a letter for each scancode, or 0
 d 3715 lastStartKey             ; the start key, kept; nothing reads it
 d 3717 countPlayersAfresh       ; ff once a game is over: enter counts the players from one again
-d 372a noTilt                   ; ff: the table cannot be tilted (pfr: cheat.no_tilt)
+d 372a noTilt                   ; ff: the table cannot be tilted
 d 3729 cheatLetter              ; the letter typed
 d 372b cheatPrefix              ; ff: what is typed begins a cheat's word
 d 372d cheatTyped               ; word: how many letters are in cheatBuffer
@@ -257,7 +257,7 @@ d 35d2 issueBallSfxCounter
 d 35d4 issueBallReleaseCounter
 d 3616 setStartKeysActiveCounter
 d 3618 issueBallFinishCounter
-c 0bb7 issueBallTimer           ; this and the next five: pfr's TaskKind names
+c 0bb7 issueBallTimer           ; this and the next five: the tasks a ball is served by
 c 0ca4 issueBallRaiseSfxTimer      ; the targets' sound as they rise (not in Stones 'n Bones)
 c 0cca issueBallSfxTimer
 c 0cf0 issueBallReleaseTimer    ; the ball appears at the top of the lane
@@ -277,8 +277,8 @@ v 4f59 palette                  ; the video card's colours, kept among the code
 d 2f2b lightsReady              ; ff once the start-up is done: lightsOut may work
 d 1079 lightColours             ; each light's record: its first colour, a count, the colours
 d 12bd lightRecords             ; words, by light number less one
-d 12b7 displayColoursOn         ; the display's colours, normal (pfr: color_on)
-d 132d displayColoursOff        ; and inverse (pfr: color_off)
+d 12b7 displayColoursOn         ; the display's colours, normal
+d 132d displayColoursOff        ; and inverse
 d 3555 blinks                   ; blinking lights, four bytes each, up to lightStates
 d 0f41 attractLightList         ; the lights' show while no game is played, ten bytes an entry
 d 35c4 extraBallLight           ; lightStates for light 33h: Party Land's ball owed
@@ -287,7 +287,7 @@ d 3392 flashCount
 d 3394 flashPhase
 d 3396 flashing
 
-# --- the display: the script's steps (pfr's Uop names), and the tasks they set going
+# --- the display: the script's steps, and the tasks they set going
 c 2cf1 jump
 c 4736 playJingle
 c 471e setMusic
@@ -325,7 +325,7 @@ c 4b53 dmPuts13                 ; text at a place, in each font
 c 4b94 dmPuts11
 c 4bd5 dmPuts8
 c 4c16 dmPuts5
-c 535b defaultTask              ; the task when the script has nothing to do (pfr: ScriptTask::Default)
+c 535b defaultTask              ; the task when the script has nothing to do
 c 4d92 haltTask
 c 5287 confirmQuitTask
 c 52cd waitJingleTask
@@ -345,14 +345,14 @@ c 458e drawNumber11
 c 45af drawNumber13
 c 45d0 drawNumber5
 d 3397 skipTask                 ; ff: the task misses a turn (a long message or animation begun over it)
-d 33e1 needDefaultBg            ; ff: the default task starts the main script (pfr's name)
-d 33e4 pendingMode              ; ff: modeStartOrContinue starts the count-down again (pfr's name)
-d 33f7 countdownHeld            ; the mode's count-down waits (pfr: timer_stop)
+d 33e1 needDefaultBg            ; ff: the default task starts the main script
+d 33e4 pendingMode              ; ff: modeStartOrContinue starts the count-down again
+d 33f7 countdownHeld            ; the mode's count-down waits
 d 33f9 scriptEnded              ; ff when a script has run out, 0 when one starts
-d 33f1 gotTopScore              ; the score has passed the table's best (pfr's name)
-d 372c enterAttract             ; ff: the default task starts the attract script (pfr's name)
-d 36f6 idleFrames               ; word: frames since anything scored (pfr: timer_idle)
-d 36f8 idleShowing              ; word: ff while the display shows the best scores for it (pfr: in_idle)
+d 33f1 gotTopScore              ; the score has passed the table's best
+d 372c enterAttract             ; ff: the default task starts the attract script
+d 36f6 idleFrames               ; word: frames since anything scored
+d 36f8 idleShowing              ; word: ff while the display shows the best scores for it
 d 36fc drawSource               ; AX for drawRoutine: the text, mostly
 d 36fe drawAt                   ; DI for drawRoutine: where on the display
 d 3551 jingleTimeout            ; frames waitJingleTimeout waits at most
@@ -405,11 +405,11 @@ d 44a4 numberCentred            ; ff: moved back two for each zero in front
 d 45da scoreDrawn               ; twelve: the score's digits as the display has them
 d 45e6 scoreDrawnGroups
 
-# --- between balls and at the end of a game (Flow), with pfr's names for the script's steps
-c 0bca serveBall                ; pfr: issue_ball
+# --- between balls and at the end of a game (Flow), and the script's steps
+c 0bca serveBall
 c 0317 accBonus
 c 0363 accBonusTask
-c 042c anotherBall              ; the ball's number goes up and the same player is served (not among pfr's steps)
+c 042c anotherBall              ; the ball's number goes up and the same player is served
 c 047f recordHighScores
 c 049e recordHighScoresTask
 c 05ad highScoreInsert          ; the scores below make room, and this one goes in
@@ -437,7 +437,7 @@ v 047d highScorePlace           ; the best score beaten, 4 the highest
 v 0605 highScoreLetter          ; where the next letter goes
 v 0607 highScoreLetters         ; letters still to type
 d 3710 highScoreJingle          ; ff: the best score's tune was started
-d 3711 gotHighScore             ; a best score was beaten (pfr's name)
+d 3711 gotHighScore             ; a best score was beaten
 d 3712 sadJingle                ; the tune of no best score was started: no attract music over it
 v 071a repeatCount
 v 0732 eachScoreLeft
@@ -447,9 +447,9 @@ v 09b6 matchedAny               ; ff: a player has the match's digit
 d 021a playerRecords            ; each player's record (playerSize apart): first the score
 d 00cd matchWon                 ; Party Land's own, from here on
 d 00ce extraBalls               ; balls owed
-d 00d0 specialPlungerEvent      ; pfr's name: the ball begins without the main script
-d 00d1 partyOn                  ; pfr's name: the ball is served again; its tune is not played
-d 33f2 inGameStart              ; pfr's name: the first ball of a game is to come
+d 00d0 specialPlungerEvent      ; the ball begins without the main script
+d 00d1 partyOn                  ; the ball is served again; its tune is not played
+d 33f2 inGameStart              ; the first ball of a game is to come
 
 # --- the table's own routines, which the engine calls
 c 0004 tableStart
@@ -464,7 +464,7 @@ c 2ab1 tableFrame               ; each frame, before the rules
 c 2bd1 tableBumper              ; after a bumper's score
 c 2ddc tableModeSecond          ; each second of the count-down
 
-# --- the cheats' words: each a routine, and the script it shows (pfr's names)
+# --- the cheats' words: each a routine, and the script it shows
 c 6b01 cheatTech
 c 6b0d cheatTsp
 c 6b19 cheatJohan
@@ -492,7 +492,7 @@ d 43ec scriptSnail
 d 43f4 scriptExtraBalls
 d 43fc scriptFairPlay
 
-# --- scripts, tunes, sounds and texts (pfr's ScriptBind, JingleBind and SfxBind names)
+# --- scripts, tunes, sounds and texts
 d 13cd scriptTopScoreInterball
 d 13f7 scriptTopScoreIngame
 d 14b9 scriptInit

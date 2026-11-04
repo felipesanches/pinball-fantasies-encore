@@ -533,7 +533,7 @@ void SpeedDevils::bindRules() {
     b(var::layer) = layers::playfield;
   });
 
-  // the two rows of three targets, BUR and NIN (pfr: SpeedBur(0) to (2), SpeedNin(0) to (2))
+  // the two rows of three targets, BUR and NIN
   struct Target { u16 hit, busy, lit; u8 light; u16 timer, counter; bool bur; };
   for (const Target t : {Target{routines::bur0, var::blinkBur, var::lightStates + lights::bur, lights::bur, timers::unblinkBur0.routine, timers::unblinkBur0.counter, true},
                          {routines::bur1, var::blinkBur + 1, var::lightStates + lights::bur + 1, lights::bur + 1, timers::unblinkBur1.routine, timers::unblinkBur1.counter, true},
@@ -773,7 +773,7 @@ void SpeedDevils::bindRules() {
     endTimer();
   });
 
-  // the three PIT lanes at the bottom (pfr: SpeedPit(2), (1), (0))
+  // the three PIT lanes at the bottom
   struct Bottom { u16 roll, wait, lit; u8 light; bool lightFirst; };
   for (const Bottom l : {Bottom{routines::pit2, var::timeoutPit2, var::lightStates + lights::pit + 2, lights::pit + 2, false},
                          {routines::pit1, var::timeoutPit1, var::lightStates + lights::pit + 1, lights::pit + 1, true},

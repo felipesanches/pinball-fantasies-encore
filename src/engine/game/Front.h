@@ -21,9 +21,8 @@
 
 namespace encore {
 
-/// INTRO.PRG's places and numbers, by its own addresses. The names are those of pfr's rewrite
-/// of the game (github.com/wanda-phi/pfr: src/intro.rs, and src/assets/intro.rs for where things
-/// are in the program) where it has the same thing; else what the code does with them.
+/// INTRO.PRG's places and numbers, by its own addresses, named after what the code does with
+/// them.
 namespace intro {
 
 /// The program's segments: its own two, and the pictures', each a picture file as it was.

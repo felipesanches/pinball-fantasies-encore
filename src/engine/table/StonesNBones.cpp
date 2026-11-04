@@ -817,9 +817,8 @@ void StonesNBones::bindRules() {
     });
   };
 
-  // the nine targets, BONE in a row of four and STONE in a row of five (pfr: StonesBone(0) to
-  // (3), StonesStone(0) to (4)), each with the timer that unblinks its light (pfr's
-  // StonesUnblinkBone and StonesUnblinkStone)
+  // the nine targets, BONE in a row of four and STONE in a row of five, each with the timer
+  // that unblinks its light
   struct Target { u16 hit, blinking; u8 light; u16 timer, counter; bool stone; };
   for (const Target t : {Target{routines::bone0, var::boneBlinking, lights::bone, timers::unblinkBone0.routine, timers::unblinkBone0.counter, false},
                          {routines::bone1, var::boneBlinking + 1, lights::bone + 1, timers::unblinkBone1.routine, timers::unblinkBone1.counter, false},
@@ -892,7 +891,7 @@ void StonesNBones::bindRules() {
   });
   bindNative(routines::keyClose, [this] { drop(gates::rampTower); });
 
-  // the three KEY lanes (pfr: StonesKey(0) to (2))
+  // the three KEY lanes
   struct Lane { u16 roll; u8 light; u16 timer, counter; };
   for (const Lane l : {Lane{routines::key0, lights::key, timers::unblinkKey0.routine, timers::unblinkKey0.counter}, {routines::key1, lights::key + 1, timers::unblinkKey1.routine, timers::unblinkKey1.counter},
                        {routines::key2, lights::key + 2, timers::unblinkKey2.routine, timers::unblinkKey2.counter}}) {
@@ -1020,7 +1019,7 @@ void StonesNBones::bindRules() {
     endTimer();
   });
 
-  // what each ghost does when it is collected (ghosts::routine)
+  // what each ghost does when it is collected (ghosts::routine, the table at ds:0305)
   auto lightTowerJackpot = [this] {
     if (b(var::towerJackpot) != kSet) {
       b(var::towerJackpot) = kSet;
@@ -1108,7 +1107,7 @@ void StonesNBones::bindRules() {
     endTimer();
   });
 
-  // the three RIP lanes (pfr: StonesRip(0) to (2))
+  // the three RIP lanes
   for (const Lane l : {Lane{routines::rip0, lights::rip, timers::unblinkRip0.routine, timers::unblinkRip0.counter}, {routines::rip1, lights::rip + 1, timers::unblinkRip1.routine, timers::unblinkRip1.counter},
                        {routines::rip2, lights::rip + 2, timers::unblinkRip2.routine, timers::unblinkRip2.counter}}) {
     bindNative(l.roll, [this, l] {

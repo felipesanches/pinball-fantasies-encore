@@ -1,9 +1,7 @@
 #pragma once
 // Speed Devils' own rules (TABLE2.PRG, cs:0000 to cs:2799), on the engine the tables share.
-// Addresses here are this table's own, and named below. The names are those of pfr's rewrite
-// of the game (github.com/wanda-phi/pfr: src/table/speed.rs and the binds in its assets) where
-// it has the same thing, and the engine's (Names.inc) for what the engine shares; each routine
-// still says where it is in the program ("cs:2281").
+// Addresses here are this table's own, and named below; what the engine shares has the
+// engine's names (Names.inc). Each routine still says where it is in the program ("cs:2281").
 #include <initializer_list>
 
 #include "engine/Values.h"
@@ -23,7 +21,7 @@ constexpr u8 offroadMultiBonus = 0x04;
 constexpr u8 miniRampJump = 0x05;
 constexpr u8 pit = 0x06;  ///< the three PIT lanes, 0x06 to 0x08
 constexpr u8 pitStopGoal = 0x09;
-constexpr u8 carPartLit = 0x0a;  ///< the five car parts to be taken, 0x0a to 0x0e; by pfr's numbers 0 to 4:
+constexpr u8 carPartLit = 0x0a;  ///< the five car parts to be taken, 0x0a to 0x0e; numbered 0 to 4:
 constexpr u8 carPartLit0 = 0x0b, carPartLit1 = 0x0d, carPartLit2 = 0x0e, carPartLit3 = 0x0c, carPartLit4 = 0x0a;
 constexpr u8 miniRampJackpot = 0x0f;
 constexpr u8 bur = 0x10;  ///< the three BUR targets, 0x10 to 0x12
@@ -32,7 +30,7 @@ constexpr u8 gear = 0x16;  ///< the four GEAR lights, 0x16 to 0x19: the jump, th
 constexpr u8 gearNum = 0x1a;  ///< the six gears, 0x1a to 0x1f
 constexpr u8 place = 0x20;  ///< the ten places in the race, 0x20 to 0x29
 constexpr u8 bonus = 0x2a;  ///< the bonus multipliers 2 to 9: 0x2a to 0x31
-constexpr u8 carPart = 0x32;  ///< the five car parts taken, 0x32 to 0x36; by pfr's numbers 0 to 4:
+constexpr u8 carPart = 0x32;  ///< the five car parts taken, 0x32 to 0x36; numbered 0 to 4:
 constexpr u8 carPart0 = 0x32, carPart1 = 0x35, carPart2 = 0x34, carPart3 = 0x33, carPart4 = 0x36;
 constexpr u8 extraBall = 0x37;
 constexpr u8 speed = 0x38;  ///< the twelve lights of the speed, 0x38 to 0x43
@@ -42,8 +40,8 @@ constexpr u8 speed = 0x38;  ///< the twelve lights of the speed, 0x38 to 0x43
 /// byte, as addScore adds them.
 namespace var {
 // --- the table's own
-constexpr u16 miles = 0x0056;  ///< word: trips up the miles ramps (pfr: num_cyclone)
-constexpr u16 milesDigits = 0x0058;  ///< 12 digits: the same number (pfr: NumCyclone, CycloneIncr)
+constexpr u16 miles = 0x0056;  ///< word: trips up the miles ramps
+constexpr u16 milesDigits = 0x0058;  ///< 12 digits: the same number
 constexpr u16 milesBonus = 0x0064;  ///< 12 digits: what they add to the bonus, at the end of the ball
 constexpr u16 matchWon = 0x0070;
 constexpr u16 extraBalls = 0x0071;  ///< balls owed
@@ -165,7 +163,7 @@ constexpr u16 k570 = 0x09d6;
 constexpr u16 k100000b = 0x09e2;  ///< the same number again
 }  // namespace points
 
-/// The awards (Engine::award: a tune, a score, a bonus and a script), pfr's effects.
+/// The awards (Engine::award: a tune, a score, a bonus and a script).
 namespace awards {
 constexpr u16 turboRamp = 0x0393;
 constexpr u16 milesToJump = 0x03af;
@@ -199,9 +197,9 @@ constexpr u16 pitAll = 0x06ad;
 constexpr u16 offroadExit = 0x06c9;
 constexpr u16 rampOffroad = 0x06e6;
 constexpr u16 million = 0x0704;
-constexpr u16 miles = 0x0721;  ///< for speed 0 to 11, each 0x1d on (pfr: SpeedMiles0 to 11)
+constexpr u16 miles = 0x0721;  ///< for speed 0 to 11, each 0x1d on
 constexpr u16 milesSize = 0x1d;
-constexpr u16 mb = 0x087d;  ///< the bonus multiplier 2, then 3 to 9, each 0x1c on (pfr: SpeedMb2 to Mb9)
+constexpr u16 mb = 0x087d;  ///< the bonus multiplier 2, then 3 to 9, each 0x1c on
 constexpr u16 mbSize = 0x1c;
 }  // namespace awards
 
@@ -281,12 +279,12 @@ constexpr Timer unblinkCar{0x1bd9, 0x3685};
 constexpr Timer unblinkGear1{0x1cb4, 0x3687};
 constexpr Timer resetSuperJackpot{0x1ea9, 0x3689};
 constexpr Timer unblinkGear0{0x1ec7, 0x368b};
-constexpr Timer unblinkBur0{0x120b, 0x366b};  ///< pfr: SpeedUnblinkBur
-constexpr Timer unblinkBur1{0x1263, 0x366d};  ///< pfr: SpeedUnblinkBur
-constexpr Timer unblinkBur2{0x12bb, 0x366f};  ///< pfr: SpeedUnblinkBur
-constexpr Timer unblinkNin0{0x1313, 0x3671};  ///< pfr: SpeedUnblinkNin
-constexpr Timer unblinkNin1{0x136b, 0x3673};  ///< pfr: SpeedUnblinkNin
-constexpr Timer unblinkNin2{0x13c3, 0x3675};  ///< pfr: SpeedUnblinkNin
+constexpr Timer unblinkBur0{0x120b, 0x366b};
+constexpr Timer unblinkBur1{0x1263, 0x366d};
+constexpr Timer unblinkBur2{0x12bb, 0x366f};
+constexpr Timer unblinkNin0{0x1313, 0x3671};
+constexpr Timer unblinkNin1{0x136b, 0x3673};
+constexpr Timer unblinkNin2{0x13c3, 0x3675};
 }  // namespace timers
 
 /// Routines the rules point at: the display's tasks.
@@ -296,9 +294,9 @@ constexpr u16 waitTask = 0x4a84;
 constexpr u16 nothingTask = 0x4acb;
 }  // namespace code
 
-/// The routines the table binds, each by its place in the code (cs:). pfr's names, its
-/// RollTrigger, HitTrigger and UopKind without the table's prefix, where it has them (with
-/// Trigger or Step added where timers:: has the name already); the table's hooks, that the
+/// The routines the table binds, each by its place in the code (cs:): the triggers and the
+/// script's steps after what they are (with Trigger or Step added where timers:: has the name
+/// already); the table's hooks, that the
 /// engine calls, by Names.inc's names; else after what they do. The rules also look back at
 /// some of the roll triggers (var::lastTrigger).
 namespace routines {
@@ -349,15 +347,15 @@ constexpr u16 accBonusModeHit = 0x2674;
 constexpr u16 accBonusModeRamp = 0x269e;
 constexpr u16 accBonusCyclones = 0x26c8;  ///< (here, the miles)
 constexpr u16 extraBall = 0x277e;
-constexpr u16 bur0 = 0x11de;  ///< pfr: HitTrigger SpeedBur(0)
-constexpr u16 bur1 = 0x1236;  ///< pfr: HitTrigger SpeedBur(1)
-constexpr u16 bur2 = 0x128e;  ///< pfr: HitTrigger SpeedBur(2)
-constexpr u16 nin0 = 0x12e6;  ///< pfr: HitTrigger SpeedNin(0)
-constexpr u16 nin1 = 0x133e;  ///< pfr: HitTrigger SpeedNin(1)
-constexpr u16 nin2 = 0x1396;  ///< pfr: HitTrigger SpeedNin(2)
-constexpr u16 pit2 = 0x1ee3;  ///< pfr: RollTrigger SpeedPit(2)
-constexpr u16 pit1 = 0x1f4f;  ///< pfr: RollTrigger SpeedPit(1)
-constexpr u16 pit0 = 0x1fc0;  ///< pfr: RollTrigger SpeedPit(0)
+constexpr u16 bur0 = 0x11de;
+constexpr u16 bur1 = 0x1236;
+constexpr u16 bur2 = 0x128e;
+constexpr u16 nin0 = 0x12e6;
+constexpr u16 nin1 = 0x133e;
+constexpr u16 nin2 = 0x1396;
+constexpr u16 pit2 = 0x1ee3;
+constexpr u16 pit1 = 0x1f4f;
+constexpr u16 pit0 = 0x1fc0;
 }  // namespace routines
 
 /// Variables the program keeps among its code.
@@ -378,7 +376,7 @@ constexpr u8 kScoreUndrawn = 0x12;
 namespace songAt {
 constexpr u8 plunger = 0;  ///< tunes::gameStart's place, which is also the plunger's
 constexpr u8 afterMain = 1;  ///< after the main tune, as the ball comes back down the lane
-constexpr u8 afterMode = 3;  ///< after a mode's end (pfr: set_music(3))
+constexpr u8 afterMode = 3;  ///< after a mode's end
 constexpr u8 afterAttract = 9;
 constexpr u8 afterTilt = 0x3e;
 }  // namespace songAt

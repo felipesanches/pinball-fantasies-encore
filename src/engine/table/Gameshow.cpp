@@ -356,7 +356,7 @@ void Gameshow::bindRules() {
     });
   };
 
-  // the two pairs of targets that drop (pfr: ShowCenter(0), (1), ShowLeft(0), (1))
+  // the two pairs of targets that drop
   struct Drop { u16 hit, flag, other, record; int piece; u8 light; u16 timer; };
   for (const Drop d : {Drop{routines::dropCenter0, var::lightStates + lights::dropCenter, var::lightStates + lights::dropCenter + 1, awards::dropCenter, drops::center0, lights::dropCenter,
                             timers::resetDropCenter.routine},

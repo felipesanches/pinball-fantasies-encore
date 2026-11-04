@@ -8,7 +8,7 @@
 
 namespace encore {
 
-/// Where things are in a module of 31 samples (pfr: sound/loader.rs). One of 15, the oldest
+/// Where things are in a module of 31 samples. One of 15, the oldest
 /// kind, has no mark, and its song comes 16 samples' records sooner.
 namespace modRec {
 constexpr std::size_t title = 0;
@@ -18,7 +18,7 @@ constexpr std::size_t mark = 1080;         ///< four letters: "M.K." and the lik
 constexpr std::size_t patterns = 1084;
 }  // namespace modRec
 
-/// A note in a pattern (pfr: sound/loader.rs): the sample's number is split between the high
+/// A note in a pattern: the sample's number is split between the high
 /// halves of its first and third bytes; the period is twelve bits, the effect four.
 namespace noteRec {
 constexpr std::size_t period = 0;  ///< its top four bits in the low half, with the sample's high half above
@@ -27,22 +27,22 @@ constexpr std::size_t effect = 2;  ///< in the low half, the sample's low half a
 constexpr std::size_t param = 3;
 }  // namespace noteRec
 
-/// A sample's record (pfr's Sample). Its words are big-endian, and count words.
+/// A sample's record. Its words are big-endian, and count words.
 namespace sampleRec {
 constexpr std::size_t size = 30;
 constexpr std::size_t length = 22;
 constexpr std::size_t finetune = 24, volume = 25;
-constexpr std::size_t loopStart = 26, loopLength = 28;  ///< pfr: repeat
+constexpr std::size_t loopStart = 26, loopLength = 28;
 }  // namespace sampleRec
 
-/// The song (pfr: song_len, pos_restart, positions): how many places it has, where it starts
+/// The song: how many places it has, where it starts
 /// again, and the pattern at each of 128 places.
 namespace songRec {
 constexpr std::size_t length = 0, restart = 1, order = 2;
 constexpr std::size_t size = 130;
 }  // namespace songRec
 
-/// The effects a note can carry, by number (pfr: ToneEffect, VolumeEffect, MiscEffect).
+/// The effects a note can carry, by number.
 namespace modEffect {
 constexpr u8 arpeggio = 0x0;
 constexpr u8 portamentoUp = 0x1, portamentoDown = 0x2;

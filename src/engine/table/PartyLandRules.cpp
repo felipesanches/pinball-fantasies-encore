@@ -1,6 +1,6 @@
 // Party Land's rules: what happens when the ball rolls into or hits each thing on the table
-// (TABLE1.PRG, cs:1104 to cs:2f9a). Routines are named after pfr's (src/table/party.rs) where
-// it has them, and say where they are in the program.
+// (TABLE1.PRG, cs:1104 to cs:2f9a). Routines are named after what they do, and say where they
+// are in the program.
 #include "engine/table/PartyLand.h"
 
 namespace encore {
@@ -371,7 +371,7 @@ void PartyLand::bindRules() {
     endTimer();
   });
 
-  // the three drop targets, the ducks (pfr: PartyDuck(0) to (2))
+  // the three drop targets, the ducks
   struct Target { u16 hit, lit, down, light, fall, counter, shape, at, width, flash, flashCount, flashTimer; };
   for (const Target t : {Target{routines::duck0, var::lightStates + lights::duckDrop0, var::duckHit, lights::duckDrop0, timers::duckDrop0,
                                 counters::duckDrop0, gates::duck0.dropped, gates::duck0.at, gates::duck0.width, lights::duck0,
@@ -424,7 +424,7 @@ void PartyLand::bindRules() {
     endTimer();
   });
 
-  bind(routines::orbitTopLeft, [this] {  // the top of the left orbit: the right orbit made (pfr's party_orbit_right)
+  bind(routines::orbitTopLeft, [this] {  // the top of the left orbit: the right orbit made
     if (W(var::lastTrigger) != routines::orbitTopRight) return;
     if (W(var::timeoutSpringLoop) != 0) {
       W(var::timeoutSpringLoop) = 0;
@@ -497,7 +497,7 @@ void PartyLand::bindRules() {
     B(var::orbitRightBlinking) = 0;
     endTimer();
   });
-  bind(routines::orbitTopRight, [this] {  // the top of the right orbit: the left orbit made (pfr's party_orbit_left)
+  bind(routines::orbitTopRight, [this] {  // the top of the right orbit: the left orbit made
     if (W(var::lastTrigger) != routines::orbitTopLeft || B(var::madBlinking) == kSet) return;
     incJackpot();
     modeCountRamp();
@@ -936,7 +936,7 @@ void PartyLand::bindRules() {
   });
   bind(routines::skyrideRamp, [this] { drop(gates::skyride); });  // up the skyride
 
-  // the four lanes at the top (pfr: PartySkyridePuke(0), (3), (1), (2))
+  // the four lanes at the top
   struct Lane { u16 roll, lit; u8 light; u16 timer, counter; };
   for (const Lane l : {Lane{routines::skyridePuke0, var::lightStates + lights::puke0, lights::puke0, timers::pukeUnblink0, counters::pukeUnblink0},
                        {routines::skyridePuke3, var::lightStates + lights::puke3, lights::puke3, timers::pukeUnblink3, counters::pukeUnblink3},
