@@ -5,23 +5,13 @@ namespace encore {
 namespace {
 
 constexpr u8 noSlope = 0xff;  ///< slopes_: no slope found for the stretch
-constexpr u8 kMostPlayers = 8;
-constexpr u16 kCheatLetters = 0x0c;  ///< the letters typed are kept, up to so many
 constexpr u16 kCheatsEnd = 0xff;  ///< ends the cheats' list, in place of a routine
 constexpr u8 kWordEnd = '$';  ///< ends a cheat's word, as DOS ends a string
 constexpr u8 kPolled = 8;  ///< what the music's callback is given when the driver is polled
-constexpr u8 kRepeatsBelowZero = 0xff;  ///< at::musicRepeats counted down from nought,
-constexpr u8 kRepeatsWrapped = 0x7f;  ///< and from -128, which the signed test also takes for below
-constexpr u8 kFirstBit = 0x80;  ///< the display saved a dot to a bit, from the highest down
-/// Rows down from the screen's top: the ball below the first is drawn at the start of the
-/// frame; with the second above the third flipper's row, that flipper is drawn there too.
-constexpr u16 flippersRowLow = 0x67, flippersRowHigh = 0x9e;
-constexpr u16 thirdFlipperRowLow = 0x6c, thirdFlipperRowHigh = 0xa3;
-
 }  // namespace
 
 Engine::Engine(ByteView prg, int table) : Program(prg, table) {
-  for (auto& plane : video_) plane.assign(mz::segmentBytes, 0);
+  for (auto& plane : video_) plane.assign(0x10000, 0);
   // Which slope each stretch of eight dots lies on, worked out once from the masks as the
   // program comes with them: the first of the stretch to its left, itself and the one to
   // its right that has nothing solid in it says so (cs:59d9), and noSlope if none has.
@@ -29,7 +19,7 @@ Engine::Engine(ByteView prg, int table) : Program(prg, table) {
     const u16 marks = S(layer == 0 ? at::marksGround : at::marksRamps), walls = S(layer == 0 ? at::wallsGround : at::wallsRamps),
               slope = S(layer == 0 ? at::slopesGround : at::slopesRamps);
     auto& out = slopes_[static_cast<std::size_t>(layer)];
-    out.assign(playfield::maskRow * playfield::rows, u8{noSlope});
+    out.assign(0x28 * 0x240, u8{noSlope});
     auto clear = [&](u16 at) { return farB(marks, at) == 0 && farB(walls, at) == 0; };
     for (u16 at = 0; at < out.size(); ++at) {
       if (at != 0 && clear(static_cast<u16>(at - 1))) out[at] = farB(slope, static_cast<u16>(at - 1)) & slopeRec::number;
@@ -143,7 +133,7 @@ void Engine::frameCallback() {
   if (B(at::callbacksOn) != kSet) return;
   B(at::frameOnTime) = kSet;  // the driver says no frame was missed
   if (B(at::afterPause) != 0) --B(at::afterPause);
-  W(at::loopCounter) += playfield::chanceStir;
+  W(at::loopCounter) += 0x406;
   if (B(at::attract) == kSet) return attractFrame();
   B(at::inFrameCallback) = 0;
   if (CB(at::midFrameDue) == kSet) return;
@@ -163,7 +153,7 @@ void Engine::frameCallback() {
   } else {
     drawFlipper(flipperRec::third);
   }
-  if (ballY >= static_cast<u16>(W(at::screenTop) + (high() ? flippersRowHigh : flippersRowLow))) {
+  if (ballY >= static_cast<u16>(W(at::screenTop) + (high() ? 0x9e : 0x67))) {
     if (B(at::drawOrder) != kSet) {
       B(at::flippersWithBall) = kSet;
       drawBall();
@@ -185,7 +175,7 @@ void Engine::frameCallback() {
     drawFlipper(1);
     frameSteps();
     B(at::ballMidFrame) = kSet;
-    if (static_cast<u16>(W(at::screenTop) + (high() ? thirdFlipperRowHigh : thirdFlipperRowLow)) < kw(at::thirdFlipperRowInsn, 1)) drawFlipper(flipperRec::third);
+    if (static_cast<u16>(W(at::screenTop) + (high() ? 0xa3 : 0x6c)) < kw(at::thirdFlipperRowInsn, 1)) drawFlipper(flipperRec::third);
   }
   afterSteps();
   B(at::stepsBusy) = 0;
@@ -259,7 +249,7 @@ void Engine::midFrameCallback() {
   if (const u8 al = B(at::startKey); al != 0) {  // a game was asked for: with this many players
     B(at::startKey) = 0;
     B(at::players) = static_cast<u8>(al - (scancodes::f1 - 1));
-    B(at::playersDigit) = static_cast<u8>(al - (scancodes::f1 - 1) + glyph::digit0);
+    B(at::playersDigit) = static_cast<u8>(al - (scancodes::f1 - 1) + 0x37);
     startScript(A(at::scriptGameStartPlayers));
     effect(at::soundGameStart);
     B(at::playersMayJoin) = 0;
@@ -286,15 +276,15 @@ void Engine::attractFrame() {
 
 /// cs:60c5: the screen drifts up and down the table, and a game starts when one is asked for.
 void Engine::attractMidFrame() {
-  const i16 bottom = high() ? screenScroll::lastHigh : screenScroll::lastLow;
-  if (W(at::lookAt).s() >= bottom) W(at::attractScroll) = screenScroll::up;
-  if (W(at::lookAt).s() <= 0) W(at::attractScroll) = screenScroll::down;
+  const i16 bottom = high() ? 0x103 : 0x171;
+  if (W(at::lookAt).s() >= bottom) W(at::attractScroll) = 0xffff;
+  if (W(at::lookAt).s() <= 0) W(at::attractScroll) = 1;
   W(at::lookAt) += W(at::attractScroll);
   scroll();
   if (const u8 al = B(at::startKey); al != 0) {
     B(at::startKey) = 0;
     B(at::players) = static_cast<u8>(al - (scancodes::f1 - 1));
-    B(at::playersDigit) = static_cast<u8>(al - (scancodes::f1 - 1) + glyph::digit0);
+    B(at::playersDigit) = static_cast<u8>(al - (scancodes::f1 - 1) + 0x37);
     startScript(A(at::scriptGameStart));
     effect(at::soundGameStart);
     W(at::lookAt) = kNone;
@@ -311,32 +301,32 @@ void Engine::attractMidFrame() {
 /// cs:4018: where the screen looks. It follows the ball, more or less quickly as the options
 /// say, unless something has said where to look.
 void Engine::scroll() {
-  i16 row = static_cast<i16>(W(at::ballY) - (high() ? screenScroll::ballRowHigh : screenScroll::ballRowLow));
-  const i16 last = high() ? screenScroll::lastHigh : screenScroll::lastLow;
+  i16 row = static_cast<i16>(W(at::ballY) - (high() ? 0x82 : 0x4b));
+  const i16 last = high() ? 0x103 : 0x171;
   if (row < 0) row = 0;
   else if (static_cast<u16>(row) >= static_cast<u16>(last)) row = last;
   if (W(at::lookAt) != kNone) {
-    row = static_cast<i16>(W(at::lookAt) + screenScroll::displayRows);
+    row = static_cast<i16>(W(at::lookAt) + 0x21);
     W(at::scrollFixed) = static_cast<u16>(row << 4);
-    W(at::screenTop) = static_cast<u16>(row - screenScroll::displayRows);
+    W(at::screenTop) = static_cast<u16>(row - 0x21);
     screenRow_ = static_cast<u16>(row);
     return;
   }
   if (W(at::lookAtSoft) != kNone) row = W(at::lookAtSoft).s();
-  row = static_cast<i16>(row + screenScroll::displayRows);
+  row = static_cast<i16>(row + 0x21);
   i16 step = static_cast<i16>((row - (W(at::scrollFixed).s() >> 4)) * W(at::scrollSpeed).s());
   W(at::scrollFixed) += static_cast<u16>(step >> 2);
   i16 off = static_cast<i16>(row - (W(at::scrollFixed).s() >> 4));
   if (off >= 0) {
-    off = static_cast<i16>(off - (high() ? screenScroll::aheadHigh : screenScroll::aheadLow));
+    off = static_cast<i16>(off - (high() ? 0xaa : 0x73));
     if (off >= 0) W(at::scrollFixed) += static_cast<u16>(off << 4);
   } else {
-    off = static_cast<i16>(off + (high() ? screenScroll::ballRowHigh : screenScroll::ballRowLow));
+    off = static_cast<i16>(off + (high() ? 0x82 : 0x4b));
     if (off <= 0) W(at::scrollFixed) += static_cast<u16>(off << 4);
   }
   const i16 shown = static_cast<i16>((W(at::scrollFixed).s() >> 4) + W(at::nudgeLift).s());
   screenRow_ = static_cast<u16>(shown);
-  W(at::screenTop) = static_cast<u16>(shown - screenScroll::displayRows);
+  W(at::screenTop) = static_cast<u16>(shown - 0x21);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -346,10 +336,10 @@ void Engine::mainLoop() {
   if (pause_ != Pause::No) return paused();  // the original waits inside the pause for a key
   if (CB(at::keysOn) != 0) {
     u8& key = B(at::lastKey);
-    if (key == scancodes::f9) { key = scancodes::none; W(at::scrollSpeed) = screenScroll::soft; }  // F9, F10: how fast the screen follows
-    if (key == scancodes::f10) { key = scancodes::none; W(at::scrollSpeed) = screenScroll::medium; }
-    if (B(at::scrollKey) == scrollKey::f11) { B(at::scrollKey) = 0; W(at::scrollSpeed) = screenScroll::hard; }
-    if (B(at::scrollKey) == scrollKey::f12) { B(at::scrollKey) = 0; W(at::scrollSpeed) = screenScroll::hardest; }
+    if (key == scancodes::f9) { key = scancodes::none; W(at::scrollSpeed) = 0x09; }  // F9, F10: how fast the screen follows
+    if (key == scancodes::f10) { key = scancodes::none; W(at::scrollSpeed) = 0x0b; }
+    if (B(at::scrollKey) == scrollKey::f11) { B(at::scrollKey) = 0; W(at::scrollSpeed) = 0x14; }
+    if (B(at::scrollKey) == scrollKey::f12) { B(at::scrollKey) = 0; W(at::scrollSpeed) = 0x28; }
     if (B(at::attract) == kSet) {  // no game
       playersKey();
       typeCheat();
@@ -366,7 +356,7 @@ void Engine::mainLoop() {
       if (B(at::ballOnPlunger) == kSet) {
         if (key == scancodes::escape) {  // escape while the ball waits on the plunger: the game is given up (cs:32b1)
           key = scancodes::none;
-          placeBall(playfield::abortX, playfield::abortY);
+          placeBall(0x12c, 0x23a);
           CB(at::keysOn) = kSet;
           addTimer(F(at::gameOverTimer));
           call(F(at::tableAttractMusic));
@@ -400,7 +390,7 @@ void Engine::mainLoop() {
   if (B(at::lastKey) == scancodes::escape) B(at::lastKey) = scancodes::none;
   ++W(at::loopCounter);
   if (B(at::ballHidden) != 0 && !drawsChance()) {  // the spin a ball will be served with is drawn afresh all the while
-    u16 spin = W(at::loopCounter) & (playfield::spinRange - 1);
+    u16 spin = W(at::loopCounter) & 0x3ff;
     if (spin & 1) spin = static_cast<u16>(-spin);
     W(at::spin) = spin;
   }
@@ -426,7 +416,7 @@ void Engine::playersKey() {
   }
   if (al != scancodes::enter) return;
   B(at::lastKey) = scancodes::none;
-  if (B(at::players) >= kMostPlayers) return;
+  if (B(at::players) >= 8) return;
   if (B(at::playersMayJoin) == 0) return;
   if (refuseFewerPlayers && B(at::attract) != kSet && (B(at::countPlayersAfresh) != 0 ? 0 : B(at::players)) + 1 < B(at::player)) return;
   if (B(at::countPlayersAfresh) != 0) {
@@ -450,9 +440,9 @@ void Engine::typeCheat() {
   B(at::lastKey) = scancodes::none;
   B(at::cheatBuffer, W(at::cheatTyped)) = al;
   ++W(at::cheatTyped);
-  if (W(at::cheatTyped) > kCheatLetters) {
+  if (W(at::cheatTyped) > 0x0c) {
     W(at::cheatTyped) = 0;
-    for (u16 i = 0; i < kCheatLetters; ++i) B(at::cheatBuffer, i) = glyph::space;
+    for (u16 i = 0; i < 0x0c; ++i) B(at::cheatBuffer, i) = 0x20;
     return;
   }
   u16 s = A(at::cheats);
@@ -487,19 +477,19 @@ void Engine::typeCheat() {
   if (B(at::cheatPrefix) == kSet) return;
   W(at::cheatTyped) = 1;  // no word begins like this: start again from this letter
   B(at::cheatBuffer) = B(at::cheatLetter);
-  for (u16 i = 1; i < kCheatLetters; ++i) B(at::cheatBuffer, i) = glyph::space;
+  for (u16 i = 1; i < 0x0c; ++i) B(at::cheatBuffer, i) = 0x20;
 }
 
 /// cs:3478: a press of the space bar shakes the table.
 void Engine::nudgeKey() {
   if (B(at::noTilt) == kSet) return;
   if (B(at::ballUntouched) != kSet && B(at::tilted) != kSet && B(at::ballLost) != kSet && CB(at::nudgeHeld) != kSet) {
-    W(at::tiltCounter) += tilt::shake;
+    W(at::tiltCounter) += 0x3c;
     CB(at::nudgeHeld) = kSet;
-    if (W(at::tiltCounter) > tilt::tilted) {
+    if (W(at::tiltCounter) > 0x78) {
       B(at::tilted) = kSet;
       todo(at::tableTilt);
-    } else if (W(at::tiltCounter) > tilt::warning) {
+    } else if (W(at::tiltCounter) > 0x3c) {
       todo(at::tableTiltWarning);
     }
   }
@@ -557,7 +547,7 @@ void Engine::paused() {
     return;
   }
   // any other key: on with the game (cs:3203)
-  B(at::afterPause) = frames::afterPause;
+  B(at::afterPause) = 0x1e;
   B(at::lastKey) = scancodes::none;
   sound->start();
   restoreDisplay();
@@ -568,7 +558,7 @@ void Engine::paused() {
   if (B(at::lastKey) == scancodes::escape) B(at::lastKey) = scancodes::none;
   ++W(at::loopCounter);
   if (B(at::ballHidden) != 0 && !drawsChance()) {
-    u16 spin = W(at::loopCounter) & (playfield::spinRange - 1);
+    u16 spin = W(at::loopCounter) & 0x3ff;
     if (spin & 1) spin = static_cast<u16>(-spin);
     W(at::spin) = spin;
   }
@@ -577,9 +567,9 @@ void Engine::paused() {
 
 void Engine::message(u16 text, u16 at) {
   W(at::fillAt) = display::top;
-  W(at::fillWidth) = display::width;
-  W(at::fillRows) = display::rows;
-  fillDisplay(display::top, display::width, display::rows);
+  W(at::fillWidth) = 0x50;
+  W(at::fillRows) = 0x10;
+  fillDisplay(display::top, 0x50, 0x10);
   setFont(font::h13);
   W(at::glyphRowsCut) = 0;
   W(at::glyphFirstRow) = 0;
@@ -590,14 +580,14 @@ void Engine::saveDisplay() {
   displayNormal();
   flushColours();
   u16 to = A(at::savedDisplay);
-  B(at::savedDisplayBit) = kFirstBit;
+  B(at::savedDisplayBit) = 0x80;
   for (int plane = 0; plane < 2; ++plane)
-    for (u16 row = 0; row < display::rows; ++row) {
+    for (u16 row = 0; row < 0x10; ++row) {
       nativeB(to) = 0;
-      for (u16 x = 0; x < display::width; ++x) {
-        if (dot(plane, static_cast<u16>(display::top + row * display::row + x)) == lit()) nativeB(to) |= B(at::savedDisplayBit);
+      for (u16 x = 0; x < 0x50; ++x) {
+        if (dot(plane, static_cast<u16>(display::top + row * 0xa8 + x)) == lit()) nativeB(to) |= B(at::savedDisplayBit);
         const bool wrapped = B(at::savedDisplayBit) & 1;
-        B(at::savedDisplayBit) = static_cast<u8>((B(at::savedDisplayBit) >> 1) | (wrapped ? kFirstBit : 0));
+        B(at::savedDisplayBit) = static_cast<u8>((B(at::savedDisplayBit) >> 1) | (wrapped ? 0x80 : 0));
         if (wrapped) nativeB(++to) = 0;
       }
     }
@@ -611,13 +601,13 @@ void Engine::saveDisplay() {
 
 void Engine::restoreDisplay() {
   u16 from = A(at::savedDisplay);
-  B(at::savedDisplayBit) = kFirstBit;
+  B(at::savedDisplayBit) = 0x80;
   for (int plane = 0; plane < 2; ++plane)
-    for (u16 row = 0; row < display::rows; ++row)
-      for (u16 x = 0; x < display::width; ++x) {
-        dot(plane, static_cast<u16>(display::top + row * display::row + x)) = (nativeB(from) & B(at::savedDisplayBit)) ? lit() : unlit();
+    for (u16 row = 0; row < 0x10; ++row)
+      for (u16 x = 0; x < 0x50; ++x) {
+        dot(plane, static_cast<u16>(display::top + row * 0xa8 + x)) = (nativeB(from) & B(at::savedDisplayBit)) ? lit() : unlit();
         const bool wrapped = B(at::savedDisplayBit) & 1;
-        B(at::savedDisplayBit) = static_cast<u8>((B(at::savedDisplayBit) >> 1) | (wrapped ? kFirstBit : 0));
+        B(at::savedDisplayBit) = static_cast<u8>((B(at::savedDisplayBit) >> 1) | (wrapped ? 0x80 : 0));
         if (wrapped) ++from;
       }
   W(at::savedDisplayAt) = from;
@@ -633,7 +623,7 @@ u8 Engine::musicCallback(u8 al) {
     al = B(at::musicNext);
     B(at::jingleEnded) = kSet;
     B(at::jingleEndedRules) = kSet;
-  } else if (left == kRepeatsBelowZero || left == kRepeatsWrapped) {  // below zero, as the original's signed test has it
+  } else if (left == 0xff || left == 0x7f) {  // below zero, as the original's signed test has it
     B(at::musicRepeats) = 0;
   }
   if (B(at::musicOff) != 0 && al <= kb(at::musicLastPlaceInsn, 1)) al = kb(at::silencePlaceInsn, 1);

@@ -10,7 +10,7 @@ TableMusic::TableMusic(Engine& engine, MusicDriver& driver)
 /// Function 0x10 as the table sees it: the answer is the place the music was at.
 u8 TableMusic::jump(u16 position) {
   const u8 was = position_;
-  position_ = static_cast<u8>(position) & State::kPlaceBits;
+  position_ = static_cast<u8>(position) & 0x7f;
   interrupt_ = true;
   told_ = true;
   return was;
@@ -78,7 +78,7 @@ u8 TableMusic::next(u8 following) {
   for (;;) {
     State s(value);
     if (s.interrupt) return following;  // it is about to be sent elsewhere anyway
-    s.position = following & State::kPlaceBits;
+    s.position = following & 0x7f;
     if (state_.compare_exchange_weak(value, s.pack(), std::memory_order_release, std::memory_order_acquire)) return following;
   }
 }
@@ -101,7 +101,7 @@ u8 TableMusic::jump(u8 place) {
       s.repeat = left;
     }
     if (s.off && to <= lastOfMusic_) to = silence_;
-    s.position = to & State::kPlaceBits;
+    s.position = to & 0x7f;
     if (state_.compare_exchange_weak(value, s.pack(), std::memory_order_release, std::memory_order_acquire)) return to;
   }
 }

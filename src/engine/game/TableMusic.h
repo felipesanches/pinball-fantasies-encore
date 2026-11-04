@@ -55,20 +55,19 @@ class TableMusic final : public SoundDriver, public Conductor {
  private:
   struct State {
     // where each part is in the word
-    static constexpr int kPlaceBits = 0x7f, kInterrupt = 0x80;
+    static constexpr int kInterrupt = 0x80;
     static constexpr u32 kOff = 0x80000000u;
-    static constexpr int kInterruptBit = 7, kRepeatAt = 8, kPriorityAt = 16, kMusicAt = 24, kOffBit = 31;
     u8 position = 0;
     bool interrupt = false;
     u8 repeat = 0, priority = 0, music = 0;
     bool off = false;
     State() = default;
     explicit State(u32 v)
-        : position(static_cast<u8>(v & kPlaceBits)), interrupt((v & kInterrupt) != 0), repeat(static_cast<u8>(v >> kRepeatAt)),
-          priority(static_cast<u8>(v >> kPriorityAt)), music(static_cast<u8>(v >> kMusicAt & kPlaceBits)), off((v & kOff) != 0) {}
+        : position(static_cast<u8>(v & 0x7f)), interrupt((v & kInterrupt) != 0), repeat(static_cast<u8>(v >> 8)),
+          priority(static_cast<u8>(v >> 16)), music(static_cast<u8>(v >> 24 & 0x7f)), off((v & kOff) != 0) {}
     u32 pack() const {
-      return u32{position} | u32{interrupt} << kInterruptBit | u32{repeat} << kRepeatAt | u32{priority} << kPriorityAt |
-             u32{static_cast<u8>(music & kPlaceBits)} << kMusicAt | u32{off} << kOffBit;
+      return u32{position} | u32{interrupt} << 7 | u32{repeat} << 8 | u32{priority} << 16 |
+             u32{static_cast<u8>(music & 0x7f)} << 24 | u32{off} << 31;
     }
   };
 

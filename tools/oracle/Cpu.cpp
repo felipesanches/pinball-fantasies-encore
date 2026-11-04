@@ -11,7 +11,6 @@ constexpr int kAdd = 0, kOr = 1, kAdc = 2, kSbb = 3, kAnd = 4, kSub = 5, kXor = 
 /// The six forms each of those comes in (the opcode's low three bits): memory or a register
 /// with a register, a register with memory or a register, the accumulator with a number.
 constexpr int kRmReg8 = 0, kRmReg16 = 1, kRegRm8 = 2, kRegRm16 = 3, kAccImm8 = 4, kAccImm16 = 5;
-constexpr int kAluForms = 6;
 /// The eight shifts and rotations (the ModR/M byte's middle field after c0, c1, d0 to d3).
 constexpr int kRol = 0, kRor = 1, kRcl = 2, kRcr = 3, kShl = 4, kShr = 5, kSal = 6, kSar = 7;
 /// After f6 and f7 (1 is a second test).
@@ -26,14 +25,6 @@ constexpr int kModNoDisp = 0, kModDisp8 = 1, kModDisp16 = 2, kModReg = 3;
 /// Its low three, for memory: the registers the address is made of (with a mod of 0, kRmBp is
 /// a word that follows instead).
 constexpr int kRmBxSi = 0, kRmBxDi = 1, kRmBpSi = 2, kRmBpDi = 3, kRmSi = 4, kRmDi = 5, kRmBp = 6;
-/// The top bit of a byte and of a word, the carry out of each, and the carry out of a nibble.
-constexpr int kSign8 = 0x80, kSign16 = 0x8000, kCarry8 = 0x100, kCarry16 = 0x10000, kNibbleCarry = 0x10;
-/// The decimal adjustments: a byte holds two digits of four bits; past nine, six more carries.
-constexpr int kLowNibble = 0x0f, kMaxDigit = 9, kDecimalAdjust = 6, kMaxDecimal = 0x99, kDecimalAdjustHigh = 0x60;
-/// aaa's: six to AL, one to AH.
-constexpr int kAsciiAdjust = 0x106;
-/// The 80186 takes a shift's count, and enter's nesting level, modulo 32.
-constexpr int kCountMask = 31;
 /// Below this segment are the vectors and the BIOS's notes, where no program's code is.
 constexpr int kLowestCodeSegment = 0x50;
 /// The breakpoint's interrupt (int3).
@@ -111,12 +102,12 @@ void Cpu::set16(const Operand& o, u16 v) {
 
 void Cpu::setSzp8(u8 v) {
   setFlag(ZF, v == 0);
-  setFlag(SF, v & kSign8);
+  setFlag(SF, v & 0x80);
   setFlag(PF, parity(v));
 }
 void Cpu::setSzp16(u16 v) {
   setFlag(ZF, v == 0);
-  setFlag(SF, v & kSign16);
+  setFlag(SF, v & 0x8000);
   setFlag(PF, parity(static_cast<u8>(v)));
 }
 
@@ -139,10 +130,10 @@ u8 Cpu::alu8(int op, u8 a, u8 b) {
     setFlag(OF, false);
     setFlag(AF, false);
   } else {
-    setFlag(CF, res & kCarry8);
-    setFlag(AF, (a ^ b ^ v) & kNibbleCarry);
+    setFlag(CF, res & 0x100);
+    setFlag(AF, (a ^ b ^ v) & 0x10);
     const bool sub = op == kSbb || op == kSub || op == kCmp;
-    setFlag(OF, sub ? ((a ^ b) & (a ^ v) & kSign8) : (~(a ^ b) & (a ^ v) & kSign8));
+    setFlag(OF, sub ? ((a ^ b) & (a ^ v) & 0x80) : (~(a ^ b) & (a ^ v) & 0x80));
   }
   setSzp8(v);
   return v;
@@ -166,10 +157,10 @@ u16 Cpu::alu16(int op, u16 a, u16 b) {
     setFlag(OF, false);
     setFlag(AF, false);
   } else {
-    setFlag(CF, res & kCarry16);
-    setFlag(AF, (a ^ b ^ v) & kNibbleCarry);
+    setFlag(CF, res & 0x10000);
+    setFlag(AF, (a ^ b ^ v) & 0x10);
     const bool sub = op == kSbb || op == kSub || op == kCmp;
-    setFlag(OF, sub ? ((a ^ b) & (a ^ v) & kSign16) : (~(a ^ b) & (a ^ v) & kSign16));
+    setFlag(OF, sub ? ((a ^ b) & (a ^ v) & 0x8000) : (~(a ^ b) & (a ^ v) & 0x8000));
   }
   setSzp16(v);
   return v;
@@ -188,27 +179,26 @@ u16 Cpu::inc16(u16 v, bool dec) {
   return res;
 }
 
-// op: kRol to kSar. The 80186 takes the count modulo 32. (Sar's sign bit is written 0x80 and
-// 0x8000: with kSign8 and kSign16 there, GCC lays out the path seldom taken another way.)
+// op: kRol to kSar. The 80186 takes the count modulo 32.
 u8 Cpu::shift8(int op, u8 v, int count) {
-  count &= kCountMask;
+  count &= 31;
   if (!count) return v;
   bool c = flag(CF);
   for (int i = 0; i < count; ++i) {
     const u8 before = v;
     switch (op) {
-      case kRol: c = v & kSign8; v = static_cast<u8>((v << 1) | (c ? 1 : 0)); break;
-      case kRor: c = v & 1; v = static_cast<u8>((v >> 1) | (c ? kSign8 : 0)); break;
-      case kRcl: { const bool n = v & kSign8; v = static_cast<u8>((v << 1) | (c ? 1 : 0)); c = n; break; }
-      case kRcr: { const bool n = v & 1; v = static_cast<u8>((v >> 1) | (c ? kSign8 : 0)); c = n; break; }
-      case kShl: case kSal: c = v & kSign8; v = static_cast<u8>(v << 1); break;
+      case kRol: c = v & 0x80; v = static_cast<u8>((v << 1) | (c ? 1 : 0)); break;
+      case kRor: c = v & 1; v = static_cast<u8>((v >> 1) | (c ? 0x80 : 0)); break;
+      case kRcl: { const bool n = v & 0x80; v = static_cast<u8>((v << 1) | (c ? 1 : 0)); c = n; break; }
+      case kRcr: { const bool n = v & 1; v = static_cast<u8>((v >> 1) | (c ? 0x80 : 0)); c = n; break; }
+      case kShl: case kSal: c = v & 0x80; v = static_cast<u8>(v << 1); break;
       case kShr: c = v & 1; v = static_cast<u8>(v >> 1); break;
       default: c = v & 1; v = static_cast<u8>((v >> 1) | (v & 0x80)); break;  // kSar: the sign bit kept
     }
     // The overflow flag is defined for a count of one; this leaves it as the last step's.
-    if (op == kRol || op == kRcl || op == kShl || op == kSal) setFlag(OF, ((v & kSign8) != 0) != c);
-    else if (op == kRor || op == kRcr) setFlag(OF, ((v ^ (v << 1)) & kSign8) != 0);
-    else if (op == kShr) setFlag(OF, before & kSign8);
+    if (op == kRol || op == kRcl || op == kShl || op == kSal) setFlag(OF, ((v & 0x80) != 0) != c);
+    else if (op == kRor || op == kRcr) setFlag(OF, ((v ^ (v << 1)) & 0x80) != 0);
+    else if (op == kShr) setFlag(OF, before & 0x80);
     else setFlag(OF, false);
   }
   setFlag(CF, c);
@@ -217,23 +207,23 @@ u8 Cpu::shift8(int op, u8 v, int count) {
 }
 
 u16 Cpu::shift16(int op, u16 v, int count) {
-  count &= kCountMask;
+  count &= 31;
   if (!count) return v;
   bool c = flag(CF);
   for (int i = 0; i < count; ++i) {
     const u16 before = v;
     switch (op) {
-      case kRol: c = v & kSign16; v = static_cast<u16>((v << 1) | (c ? 1 : 0)); break;
-      case kRor: c = v & 1; v = static_cast<u16>((v >> 1) | (c ? kSign16 : 0)); break;
-      case kRcl: { const bool n = v & kSign16; v = static_cast<u16>((v << 1) | (c ? 1 : 0)); c = n; break; }
-      case kRcr: { const bool n = v & 1; v = static_cast<u16>((v >> 1) | (c ? kSign16 : 0)); c = n; break; }
-      case kShl: case kSal: c = v & kSign16; v = static_cast<u16>(v << 1); break;
+      case kRol: c = v & 0x8000; v = static_cast<u16>((v << 1) | (c ? 1 : 0)); break;
+      case kRor: c = v & 1; v = static_cast<u16>((v >> 1) | (c ? 0x8000 : 0)); break;
+      case kRcl: { const bool n = v & 0x8000; v = static_cast<u16>((v << 1) | (c ? 1 : 0)); c = n; break; }
+      case kRcr: { const bool n = v & 1; v = static_cast<u16>((v >> 1) | (c ? 0x8000 : 0)); c = n; break; }
+      case kShl: case kSal: c = v & 0x8000; v = static_cast<u16>(v << 1); break;
       case kShr: c = v & 1; v = static_cast<u16>(v >> 1); break;
       default: c = v & 1; v = static_cast<u16>((v >> 1) | (v & 0x8000)); break;  // kSar: the sign bit kept
     }
-    if (op == kRol || op == kRcl || op == kShl || op == kSal) setFlag(OF, ((v & kSign16) != 0) != c);
-    else if (op == kRor || op == kRcr) setFlag(OF, ((v ^ (v << 1)) & kSign16) != 0);
-    else if (op == kShr) setFlag(OF, before & kSign16);
+    if (op == kRol || op == kRcl || op == kShl || op == kSal) setFlag(OF, ((v & 0x8000) != 0) != c);
+    else if (op == kRor || op == kRcr) setFlag(OF, ((v ^ (v << 1)) & 0x8000) != 0);
+    else if (op == kShr) setFlag(OF, before & 0x8000);
     else setFlag(OF, false);
   }
   setFlag(CF, c);
@@ -319,8 +309,8 @@ void Cpu::raise(u8 number) {
   push(ip);
   setFlag(IF, false);
   setFlag(TF, false);
-  ip = read16(0, static_cast<u16>(number * kVectorSize));
-  s[CS] = read16(0, static_cast<u16>(number * kVectorSize + 2));
+  ip = read16(0, static_cast<u16>(number * 4));
+  s[CS] = read16(0, static_cast<u16>(number * 4 + 2));
 }
 
 void Cpu::run(std::uint64_t limit) {
@@ -331,9 +321,9 @@ void Cpu::run(std::uint64_t limit) {
 u16 Cpu::callRoutine(u16 seg, u16 off, bool withFlags, std::uint64_t limit) {
   // The return address is one no program is at, which is how the return is recognised.
   constexpr u16 kSeg = 0xffff, kOff = 0xfff0;
-  u16 savedR[kRegs], savedS[kSegRegs];
-  for (int i = 0; i < kRegs; ++i) savedR[i] = r[i];
-  for (int i = 0; i < kSegRegs; ++i) savedS[i] = s[i];
+  u16 savedR[8], savedS[4];
+  for (int i = 0; i < 8; ++i) savedR[i] = r[i];
+  for (int i = 0; i < 4; ++i) savedS[i] = s[i];
   const u16 savedIp = ip, savedFlags = flags;
   const bool savedHalted = halted;
   if (withFlags) {
@@ -352,8 +342,8 @@ u16 Cpu::callRoutine(u16 seg, u16 off, bool withFlags, std::uint64_t limit) {
     step();
   }
   const u16 result = r[AX];
-  for (int i = 0; i < kRegs; ++i) r[i] = savedR[i];
-  for (int i = 0; i < kSegRegs; ++i) s[i] = savedS[i];
+  for (int i = 0; i < 8; ++i) r[i] = savedR[i];
+  for (int i = 0; i < 4; ++i) s[i] = savedS[i];
   ip = savedIp;
   flags = savedFlags;
   halted = savedHalted;
@@ -392,7 +382,7 @@ void Cpu::step() {
   }
 
   // The eight arithmetic operations in their six forms each.
-  if (op < op::inc && (op & 7) < kAluForms) {
+  if (op < op::inc && (op & 7) < 6) {
     const int alu = op >> 3;
     switch (op & 7) {
       case kRmReg8: { const u8 m = fetch8(); const Operand o = modrm(m); const u8 v = alu8(alu, get8(o), reg8((m >> 3) & 7)); if (alu != kCmp) set8(o, v); break; }
@@ -417,8 +407,8 @@ void Cpu::step() {
       u8 al = lo(AX);
       const u8 old = al;
       const bool oldC = flag(CF);
-      if ((al & kLowNibble) > kMaxDigit || flag(AF)) { al = static_cast<u8>(al + kDecimalAdjust); setFlag(AF, true); } else setFlag(AF, false);
-      if (old > kMaxDecimal || oldC) { al = static_cast<u8>(al + kDecimalAdjustHigh); setFlag(CF, true); } else setFlag(CF, false);
+      if ((al & 0x0f) > 9 || flag(AF)) { al = static_cast<u8>(al + 6); setFlag(AF, true); } else setFlag(AF, false);
+      if (old > 0x99 || oldC) { al = static_cast<u8>(al + 0x60); setFlag(CF, true); } else setFlag(CF, false);
       setLo(AX, al);
       setSzp8(al);
       break;
@@ -427,26 +417,26 @@ void Cpu::step() {
       u8 al = lo(AX);
       const u8 old = al;
       const bool oldC = flag(CF);
-      if ((al & kLowNibble) > kMaxDigit || flag(AF)) { al = static_cast<u8>(al - kDecimalAdjust); setFlag(AF, true); } else setFlag(AF, false);
-      if (old > kMaxDecimal || oldC) { al = static_cast<u8>(al - kDecimalAdjustHigh); setFlag(CF, true); } else setFlag(CF, false);
+      if ((al & 0x0f) > 9 || flag(AF)) { al = static_cast<u8>(al - 6); setFlag(AF, true); } else setFlag(AF, false);
+      if (old > 0x99 || oldC) { al = static_cast<u8>(al - 0x60); setFlag(CF, true); } else setFlag(CF, false);
       setLo(AX, al);
       setSzp8(al);
       break;
     }
     case op::aaa:
-      if ((lo(AX) & kLowNibble) > kMaxDigit || flag(AF)) {
-        r[AX] = static_cast<u16>(r[AX] + kAsciiAdjust);
+      if ((lo(AX) & 0x0f) > 9 || flag(AF)) {
+        r[AX] = static_cast<u16>(r[AX] + 0x106);
         setFlag(AF, true);
         setFlag(CF, true);
       } else {
         setFlag(AF, false);
         setFlag(CF, false);
       }
-      setLo(AX, lo(AX) & kLowNibble);
+      setLo(AX, lo(AX) & 0x0f);
       break;
     case op::aas:
-      if ((lo(AX) & kLowNibble) > kMaxDigit || flag(AF)) {
-        r[AX] = static_cast<u16>(r[AX] - kDecimalAdjust);
+      if ((lo(AX) & 0x0f) > 9 || flag(AF)) {
+        r[AX] = static_cast<u16>(r[AX] - 6);
         setHi(AX, static_cast<u8>(hi(AX) - 1));
         setFlag(AF, true);
         setFlag(CF, true);
@@ -454,7 +444,7 @@ void Cpu::step() {
         setFlag(AF, false);
         setFlag(CF, false);
       }
-      setLo(AX, lo(AX) & kLowNibble);
+      setLo(AX, lo(AX) & 0x0f);
       break;
     case op::inc + AX: case op::inc + CX: case op::inc + DX: case op::inc + BX:
     case op::inc + SP: case op::inc + BP: case op::inc + SI: case op::inc + DI:
@@ -475,11 +465,11 @@ void Cpu::step() {
       break;
     case op::pusha: {
       const u16 sp = r[SP];
-      for (int i = 0; i < kRegs; ++i) push(i == SP ? sp : r[i]);
+      for (int i = 0; i < 8; ++i) push(i == SP ? sp : r[i]);
       break;
     }
     case op::popa:
-      for (int i = kRegs - 1; i >= 0; --i) {
+      for (int i = 7; i >= 0; --i) {
         const u16 v = pop();
         if (i != SP) r[i] = v;
       }
@@ -544,7 +534,7 @@ void Cpu::step() {
       break;
     }
     case op::cbw: r[AX] = static_cast<u16>(static_cast<i8>(lo(AX))); break;
-    case op::cwd: r[DX] = (r[AX] & kSign16) ? 0xffff : 0; break;
+    case op::cwd: r[DX] = (r[AX] & 0x8000) ? 0xffff : 0; break;
     case op::callFar: {
       const u16 off = fetch16(), seg = fetch16();
       push(s[CS]);
@@ -555,8 +545,8 @@ void Cpu::step() {
     }
     case op::wait: break;
     case op::pushf: push(flags); break;
-    case op::popf: flags = static_cast<u16>((pop() & kFlagsWritable) | kFlagsFixed); break;
-    case op::sahf: flags = static_cast<u16>((flags & 0xff00) | (hi(AX) & kFlagsSahf) | kFlagsFixed); break;
+    case op::popf: flags = static_cast<u16>((pop() & 0x0fd5) | 2); break;
+    case op::sahf: flags = static_cast<u16>((flags & 0xff00) | (hi(AX) & 0xd5) | 2); break;
     case op::lahf: setHi(AX, static_cast<u8>(flags)); break;
     case op::movAlMem: setLo(AX, read8(dataSeg(DS), fetch16())); break;
     case op::movAxMem: r[AX] = read16(dataSeg(DS), fetch16()); break;
@@ -604,7 +594,7 @@ void Cpu::step() {
     case op::movRm16Imm: { const u8 m = fetch8(); const Operand o = modrm(m); set16(o, fetch16()); break; }
     case op::enter: {
       const u16 size = fetch16();
-      const int level = fetch8() & kCountMask;
+      const int level = fetch8() & 31;
       push(r[BP]);
       const u16 frame = r[SP];
       for (int i = 1; i < level; ++i) {
@@ -621,7 +611,7 @@ void Cpu::step() {
     case op::retf: ip = pop(); s[CS] = pop(); break;
     case op::int3: if (!bus_.interrupt(kBreakpoint)) raise(kBreakpoint); break;
     case op::intImm: { const u8 n = fetch8(); if (!bus_.interrupt(n)) raise(n); break; }
-    case op::iret: ip = pop(); s[CS] = pop(); flags = static_cast<u16>((pop() & kFlagsWritable) | kFlagsFixed); break;
+    case op::iret: ip = pop(); s[CS] = pop(); flags = static_cast<u16>((pop() & 0x0fd5) | 2); break;
     case op::aam: {
       const u8 base = fetch8();
       if (!base) bad(op);

@@ -8,14 +8,9 @@ namespace {
 /// The original's "times five, divided by six", for the slower of the two screen modes.
 u16 fiveSixths(u16 v) { return static_cast<u16>((5 * i32{static_cast<i16>(v)}) / 6); }
 
-/// The sines' table (at::sines): words, from a quarter turn before nought to a full turn.
-constexpr u16 kSineWords = 0x0a00;
 /// The four strips of the table's picture are IFF files: the colours follow "CMAP" and the
 /// chunk's length. A strip is not looked into further than this.
-constexpr u16 kChunkHead = 8;
 constexpr int kStripSearched = 0x8000;
-/// The lights' colours, from the file's range (0-255) to the card's: so many 256ths.
-constexpr u16 kLightScale = 0xa2;
 /// The two words that start-up clears and nothing else reads or writes.
 constexpr u16 kUnusedA = 0x3706, kUnusedB = 0x370e;
 /// A flipper's note of the picture last put into the mask, as none has been.
@@ -36,13 +31,13 @@ void Engine::start(const Options& o, ByteView bestScores) {
     const u16 slopes = high() ? kw(at::slopesHighInsn, 1) : kw(at::slopesLowInsn, 1);
     for (u16 i = 0, n = kw(at::slopeCountInsn, 1); i < n; ++i) nativeW(static_cast<u16>(slopes + i * slopeRec::size + slopeRec::pullY)) -= slopeRec::lowAngle;
   }
-  B(at::balls) = o.fiveBalls ? ballsPerGame::more : ballsPerGame::usual;
+  B(at::balls) = o.fiveBalls ? 5 : 3;
   if (o.musicOff) musicKey();
-  W(at::scrollSpeed) = o.scrolling < scrollOption::medium ? screenScroll::hard : o.scrolling == scrollOption::medium ? screenScroll::medium : screenScroll::soft;
+  W(at::scrollSpeed) = o.scrolling < scrollOption::medium ? 0x14 : o.scrolling == scrollOption::medium ? 0x0b : 0x09;
   if (o.scrolling < scrollOption::medium) B(at::scrollKey) = 0;
 
   // cs:69bb: the sines are kept high byte first
-  for (u16 i = 0; i < kSineWords; ++i) {
+  for (u16 i = 0; i < 0x0a00; ++i) {
     const u8 a = B(at::sines, static_cast<u16>(i * 2));
     B(at::sines, static_cast<u16>(i * 2)) = B(at::sines, static_cast<u16>(i * 2 + 1));
     B(at::sines, static_cast<u16>(i * 2 + 1)) = a;
@@ -52,13 +47,13 @@ void Engine::start(const Options& o, ByteView bestScores) {
   CW(at::longMsgAtA) = display::top;
   CW(at::longMsgAtB) = display::top;
   if (!high()) {  // cs:3106: everything about speed is for 70 frames a second
-    for (u16 i = 0; i < material::count; ++i) W(at::materials, static_cast<u16>(i * material::size + material::minBounceSpeed)) = fiveSixths(W(at::materials, static_cast<u16>(i * material::size + material::minBounceSpeed)));
+    for (u16 i = 0; i < 8; ++i) W(at::materials, static_cast<u16>(i * material::size + material::minBounceSpeed)) = fiveSixths(W(at::materials, static_cast<u16>(i * material::size + material::minBounceSpeed)));
     for (u16 a = at::speedMin; a <= at::pushSpeedRelease; a = static_cast<u16>(a + 2)) W(a) = fiveSixths(W(a));
   }
   W(at::task) = F(at::defaultTask);  // cs:63c8
   W(at::taskState) = 0;
   startScript(A(at::scriptInit));
-  for (u16 i = 0; i < kScoreDigits; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;
+  for (u16 i = 0; i < 12; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;
   W(at::scoreDrawnGroups) = 0;
 
   // cs:69cb: the two maps of where the ball is hidden, moved to rows of 42 bytes
@@ -66,8 +61,8 @@ void Engine::start(const Options& o, ByteView bestScores) {
   for (const Move m : {Move{at::coverGround, 0x580, 0x100}, Move{at::coverRamps, 0x480, 0x000}}) {
     const u16 segment = S(m.segment);
     u16 from = m.from, to = m.to;
-    for (u16 row = 0; row < playfield::rows; ++row, to = static_cast<u16>(to + 2))
-      for (u16 b = 0; b < playfield::maskRow; ++b) farB(segment, to++) = farB(segment, from++);
+    for (u16 row = 0; row < 0x240; ++row, to = static_cast<u16>(to + 2))
+      for (u16 b = 0; b < 0x28; ++b) farB(segment, to++) = farB(segment, from++);
   }
 
   // cs:6515, as far as the logic goes: the picture's colours, a quarter as large as the file
@@ -78,26 +73,26 @@ void Engine::start(const Options& o, ByteView bestScores) {
     while (at < kStripSearched && !(farB(picture, at) == 'C' && farB(picture, static_cast<u16>(at + 1)) == 'M' &&
                             farB(picture, static_cast<u16>(at + 2)) == 'A' && farB(picture, static_cast<u16>(at + 3)) == 'P'))
       ++at;
-    at = static_cast<u16>(at + kChunkHead);
-    for (u16 i = 0; i < video::paletteBytes; ++i) {
+    at = static_cast<u16>(at + 8);
+    for (u16 i = 0; i < 0x300; ++i) {
       farB(picture, static_cast<u16>(at + i)) >>= 2;
       CB(at::palette, i) = farB(picture, static_cast<u16>(at + i));  // the last strip's are the ones kept
     }
   }
   scroll();
-  W(at::displayLine) = high() ? video::splitLineHigh : video::splitLineLow;  // cs:66cd
+  W(at::displayLine) = high() ? 0x13d : 0x19e;  // cs:66cd
 
-  if (bestScores.size() >= bestScoreRec::allBytes)  // cs:635d
-    for (u16 i = 0; i < bestScoreRec::allBytes; ++i) nativeB(static_cast<u16>(kw(at::bestScoresInsn, 1) + i)) = bestScores[i];
+  if (bestScores.size() >= 0x40)  // cs:635d
+    for (u16 i = 0; i < 0x40; ++i) nativeB(static_cast<u16>(kw(at::bestScoresInsn, 1) + i)) = bestScores[i];
   W(at::colourQueueEnd) = A(at::colourQueue);
 
   // cs:5841: the lights' colours: counts of colours become counts of bytes, and the colours
   // go from the file's range to the video card's
   for (u16 at = A(at::lightColours); nativeB(at) != 0;) {
     ++at;
-    const u16 bytes = static_cast<u16>(nativeB(at) * video::colourBytes);
+    const u16 bytes = static_cast<u16>(nativeB(at) * 3);
     nativeB(at++) = static_cast<u8>(bytes);
-    for (u16 i = 0; i < bytes; ++i, ++at) nativeB(at) = static_cast<u8>((nativeB(at) * kLightScale) >> 8);
+    for (u16 i = 0; i < bytes; ++i, ++at) nativeB(at) = static_cast<u8>((nativeB(at) * 0xa2) >> 8);
   }
   // cs:627f: the attract show's times, kept as gaps, become times
   for (u16 e = A(at::attractLightList); nativeW(e) != kNone; e = static_cast<u16>(e + attractRec::size)) {
@@ -112,10 +107,10 @@ void Engine::start(const Options& o, ByteView bestScores) {
     for (std::size_t plane = 0; plane < 4; ++plane)
       for (u16 i = 0; i < count; ++i) video_[plane][static_cast<u16>(to + i)] = farB(s, static_cast<u16>(from + i * 4 + plane));
   };
-  copyMask(at::marksRamps, 0, W(at::marksRampsCopy), video::rampsMaskBytes);
-  W(at::slopesRampsCopy) = static_cast<u16>(W(at::marksRampsCopy) + video::rampsMaskBytes);
+  copyMask(at::marksRamps, 0, W(at::marksRampsCopy), 0x13ec);
+  W(at::slopesRampsCopy) = static_cast<u16>(W(at::marksRampsCopy) + 0x13ec);
   {  // cs:3b8a
-    for (u16 i = 0; i < flipperRec::quanta; ++i) W(at::flipperQuanta, static_cast<u16>(i * 2)) = static_cast<u16>(i / flipperRec::quantum);
+    for (u16 i = 0; i < 0x528; ++i) W(at::flipperQuanta, static_cast<u16>(i * 2)) = static_cast<u16>(i / 0x37);
     for (auto& plane : video_) std::fill(plane.begin(), plane.begin() + video::picture, u8{0});
     const u16 pieces = S(at::flipperPieces);  // cs:3cd4: kept there for the flippers' pictures to be drawn from
     const u16 each = static_cast<u16>(kw(at::flipperPiecesSizeInsn, 1) >> 2), kept = kw(at::flipperPiecesKeptInsn, 1);
@@ -126,7 +121,7 @@ void Engine::start(const Options& o, ByteView bestScores) {
     nativeW(static_cast<u16>(first + flipperRec::size + flipperRec::masks)) = S(at::rightFlipperMasks);
     nativeW(static_cast<u16>(first + flipperRec::third * flipperRec::size + flipperRec::masks)) = S(at::thirdFlipperMasks);
     if (!high())
-      for (u16 f = 0; f < flipperRec::count; ++f)
+      for (u16 f = 0; f < 3; ++f)
         for (u16 field = flipperRec::accelHeld; field <= flipperRec::speedHeldMax + 2; field = static_cast<u16>(field + 2)) {
           const u16 at = static_cast<u16>(first + f * flipperRec::size + field);
           nativeW(at) = fiveSixths(nativeW(at));
@@ -143,11 +138,11 @@ void Engine::start(const Options& o, ByteView bestScores) {
       // the mask does not rub the wall out
       const u16 pictures = w(flipperRec::masks), walls = S(at::wallsGround);
       const u16 width = static_cast<u16>(w(flipperRec::width) * 2), rows = w(flipperRec::rows);
-      const u16 place = static_cast<u16>(w(flipperRec::y) * playfield::maskRow + (w(flipperRec::x) >> 3));
+      const u16 place = static_cast<u16>(w(flipperRec::y) * 0x28 + (w(flipperRec::x) >> 3));
       u16 to = 0;
       for (u16 picture = 0; picture <= w(flipperRec::lastPicture); ++picture)
         for (u16 r = 0; r < rows; ++r)
-          for (u16 b = 0; b < width; ++b) farB(pictures, to++) |= farB(walls, static_cast<u16>(place + r * playfield::maskRow + b));
+          for (u16 b = 0; b < width; ++b) farB(pictures, to++) |= farB(walls, static_cast<u16>(place + r * 0x28 + b));
     }
     const u16 x = W(at::ballX), y = W(at::ballY);  // cs:3d36 for each, wherever the ball is
     for (u16 f = first; nativeB(f) != 0; f = static_cast<u16>(f + flipperRec::size)) {
@@ -158,15 +153,15 @@ void Engine::start(const Options& o, ByteView bestScores) {
     W(at::ballX) = x;
     W(at::ballY) = y;
   }
-  copyMask(at::slopesRamps, 0, W(at::slopesRampsCopy), video::rampsMaskBytes);
-  W(at::slopesGroundCopy) = static_cast<u16>(W(at::slopesRampsCopy) + video::rampsMaskBytes);
-  copyMask(at::slopesGround, video::groundTopBytes, W(at::slopesGroundCopy), video::groundRestBytes);
+  copyMask(at::slopesRamps, 0, W(at::slopesRampsCopy), 0x13ec);
+  W(at::slopesGroundCopy) = static_cast<u16>(W(at::slopesRampsCopy) + 0x13ec);
+  copyMask(at::slopesGround, 0x23f0, W(at::slopesGroundCopy), 0x0d84);
   {  // and the playfield's top rows in the four spare bytes at the end of each row of picture
     const u16 s = S(at::slopesGround);
     for (std::size_t plane = 0; plane < 4; ++plane)
-      for (u16 k = 0; k < playfield::rows - 1; ++k)
-        for (u16 j = 0; j < video::rowSpare; ++j)
-          video_[plane][static_cast<u16>(video::firstRowSpare + k * video::rowBytes + j)] = farB(s, static_cast<u16>((k * video::rowSpare + j) * 4 + plane));
+      for (u16 k = 0; k < 0x23f; ++k)
+        for (u16 j = 0; j < 4; ++j)
+          video_[plane][static_cast<u16>(video::firstRowSpare + k * 0x54 + j)] = farB(s, static_cast<u16>((k * 4 + j) * 4 + plane));
   }
   {  // cs:65b1: the plunger's picture at rest, and a clean first row past the picture
     const u16 s = S(at::plungerPicture);
@@ -176,7 +171,7 @@ void Engine::start(const Options& o, ByteView bestScores) {
         video_[px & 3][to] = farB(s, from++);
         if ((px & 3) == 3) ++to;
       }
-    for (auto& plane : video_) std::fill(plane.begin() + video::pictureEnd, plane.begin() + video::pictureEnd + video::plungerRowBytes, u8{0});
+    for (auto& plane : video_) std::fill(plane.begin() + video::pictureEnd, plane.begin() + video::pictureEnd + 0x150, u8{0});
     B(at::plungerShown) = 0;
   }
   if (high()) B(at::keys) |= keyBits::oneStep;
@@ -196,24 +191,24 @@ void Engine::start(const Options& o, ByteView bestScores) {
   B(at::flippersLive) = 0;
   B(at::startKey) = 0;
   B(at::lastStartKey) = 0;
-  W(at::idleFrames) = frames::idleAtStart;
+  W(at::idleFrames) = 0x2ce;
   B(at::numberCentred) = 0;
   stopBlinks();
   for (u16 i = 0, slots = kw(at::timerSlotsInsn, 1); i < slots; ++i) W(at::timers, static_cast<u16>(i * 2)) = F(at::nothing);
-  for (u16 i = 0; i < kTimerCounters; ++i) W(at::counters, static_cast<u16>(i * 2)) = 0;
-  if (high()) W(at::modeSecondFrames) = frames::modeSecondHigh;
+  for (u16 i = 0; i < 0x32; ++i) W(at::counters, static_cast<u16>(i * 2)) = 0;
+  if (high()) W(at::modeSecondFrames) = 0x47;
 
   call(F(at::tableStart));
   toAttract();
-  W(at::lookAt) = high() ? screenScroll::lastHigh : screenScroll::lastLow;
-  W(at::attractScroll) = screenScroll::up;
+  W(at::lookAt) = high() ? 0x103 : 0x171;
+  W(at::attractScroll) = 0xffff;
   call(F(at::tableAttractMusic));
   scroll();
   // cs:58f5: in the picture's own colours the lights are out
   for (u16 light = 1, lights = kw(at::lightCountInsn, 1); light <= lights; ++light) {
     B(at::lightStates, light) = 0;
     u16 record = W(at::lightRecords, static_cast<u16>((light - 1) * 2));
-    u16 colour = static_cast<u16>(nativeB(record++) * video::colourBytes);
+    u16 colour = static_cast<u16>(nativeB(record++) * 3);
     const u8 count = nativeB(record++);
     for (u8 i = 0; i < count; ++i) CB(at::palette, colour++) = nativeB(record++) >> 1;
   }
@@ -221,18 +216,18 @@ void Engine::start(const Options& o, ByteView bestScores) {
     // cs:6a2f, cs:69fd: every colour becomes the grey of its three parts
     for (u16 at = A(at::lightColours), n = 0, records = kw(at::lightColourRecordsInsn, 1); n < records; ++n) {
       ++at;
-      const u16 colours = static_cast<u16>(nativeB(at++) / video::colourBytes);
-      for (u16 i = 0; i < colours; ++i, at = static_cast<u16>(at + video::colourBytes)) {
+      const u16 colours = static_cast<u16>(nativeB(at++) / 3);
+      for (u16 i = 0; i < colours; ++i, at = static_cast<u16>(at + 3)) {
         const u8 grey = static_cast<u8>((nativeB(at) + nativeB(static_cast<u16>(at + 1)) + nativeB(static_cast<u16>(at + 2))) / 3);
         nativeB(at) = nativeB(static_cast<u16>(at + 1)) = nativeB(static_cast<u16>(at + 2)) = grey;
       }
     }
-    for (u16 i = 0; i < video::paletteBytes; i = static_cast<u16>(i + video::colourBytes)) {
+    for (u16 i = 0; i < 0x300; i = static_cast<u16>(i + 3)) {
       const u8 grey = static_cast<u8>((CB(at::palette, i) + CB(at::palette, static_cast<u16>(i + 1)) + CB(at::palette, static_cast<u16>(i + 2))) / 3);
       CB(at::palette, i) = CB(at::palette, static_cast<u16>(i + 1)) = CB(at::palette, static_cast<u16>(i + 2)) = grey;
     }
   }
-  for (u16 i = 0; i < video::paletteBytes; ++i) dac_[i] = CB(at::palette, i) & video::colourMax;  // cs:4f3c, at full brightness
+  for (u16 i = 0; i < 0x300; ++i) dac_[i] = CB(at::palette, i) & 0x3f;  // cs:4f3c, at full brightness
   sound->start();
   B(at::lightsReady) = kSet;
   B(at::callbacksOn) = kSet;
@@ -253,23 +248,23 @@ void Engine::setAngle(int angle) {
 
 void Engine::setScrolling(u8 scrolling) {
   B(at::optionScrolling) = scrolling;
-  W(at::scrollSpeed) = scrolling < scrollOption::medium ? screenScroll::hard : scrolling == scrollOption::medium ? screenScroll::medium : screenScroll::soft;
+  W(at::scrollSpeed) = scrolling < scrollOption::medium ? 0x14 : scrolling == scrollOption::medium ? 0x0b : 0x09;
 }
 
 void Engine::write(std::string_view text) {
   W(at::fillAt) = display::top;
-  W(at::fillWidth) = display::width;
-  W(at::fillRows) = display::rows;
-  fillDisplay(display::top, display::width, display::rows);
+  W(at::fillWidth) = 0x50;
+  W(at::fillRows) = 0x10;
+  fillDisplay(display::top, 0x50, 0x10);
   setFont(font::h13);
   W(at::glyphRowsCut) = 0;
   W(at::glyphFirstRow) = 0;
-  if (text.size() > display::lineChars) text = text.substr(0, display::lineChars);
-  u16 at = static_cast<u16>(display::line + (display::lineChars - text.size()) * 2);  // in the middle, as GAME PAUSED is
+  if (text.size() > 20) text = text.substr(0, 20);
+  u16 at = static_cast<u16>(display::line + (20 - text.size()) * 2);  // in the middle, as GAME PAUSED is
   for (const char c : text) {
     u16 place = at;
-    drawChar(static_cast<u8>(c >= '0' && c <= '9' ? c - '0' + glyph::digit0 : c), place);
-    at = static_cast<u16>(at + display::letter);
+    drawChar(static_cast<u8>(c >= '0' && c <= '9' ? c - '0' + 0x37 : c), place);
+    at = static_cast<u16>(at + 4);
   }
 }
 

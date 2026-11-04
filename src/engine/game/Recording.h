@@ -24,9 +24,8 @@
 namespace encore {
 
 struct Recording {
-  static constexpr int kTables = 4;
   /// The tables as recordings are named after them, eight letters each.
-  static constexpr const char* kTableCodes[kTables] = {"PARTYLND", "SPDDEVLS", "GAMESHOW", "STONBONE"};
+  static constexpr const char* kTableCodes[4] = {"PARTYLND", "SPDDEVLS", "GAMESHOW", "STONBONE"};
 
   /// Raised whenever a recording would no longer play back the same: a change in the file's
   /// layout, or in how the tables play.
@@ -57,8 +56,7 @@ struct Recording {
     u32 endFrame = 0;
     bool abandoned = false;  ///< quit from the pause menu before the end
     std::vector<Bcd> scores;
-    static constexpr int kInitials = 3;
-    std::array<u8, kInitials> initials{};  ///< typed for a high score by the first player; zeros if none
+    std::array<u8, 3> initials{};  ///< typed for a high score by the first player; zeros if none
     bool operator==(const Game&) const = default;
   };
 
@@ -98,10 +96,8 @@ Recording replay(ByteView prg, ByteView module, const Recording& recording, HowP
 
 /// What a server will take.
 struct VerifyLimits {
-  static constexpr u32 kHour = 60 * 60 * 60;  ///< in frames, sixty a second
-  static constexpr int kMostBalls = 9;         ///< balls to a game, as the options or a cheat have them
-  u32 maxPlayed = kHour * 3;    ///< three hours, the pause left out
-  u32 maxFrames = kHour * 24;   ///< and a day in all, to bound the time the replay takes
+  u32 maxPlayed = (60 * 60 * 60) * 3;    ///< three hours, the pause left out
+  u32 maxFrames = (60 * 60 * 60) * 24;   ///< and a day in all, to bound the time the replay takes
   std::size_t maxEvents = 2'000'000;
 };
 

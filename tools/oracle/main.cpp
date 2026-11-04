@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     else if (!std::strcmp(argv[i], "--peek") && i + 1 < argc) pairs(argv[++i], 16, peeks);
   }
   oracle::Machine m(argv[1], table, {});
-  std::vector<bool> coverage(oracle::kSegmentBytes, false);
+  std::vector<bool> coverage(0x10000, false);
   if (coverageFile) {
     if (std::FILE* in = std::fopen(coverageFile, "r")) {
       unsigned a = 0;
@@ -57,26 +57,25 @@ int main(int argc, char** argv) {
     m.cpu.coverage = &coverage;
     m.cpu.coverageSegment = m.seg(oracle::kCodeSegment);
   }
-  namespace play = oracle::randomPlay;
   namespace scan = oracle::scan;
-  unsigned rng = static_cast<unsigned>(flip) * play::seedMix + 1;
+  unsigned rng = static_cast<unsigned>(flip) * 2654435761u + 1;
   bool left = false, right = false;
   try {
     m.log = log;
     for (int f = 0; f < frames && !m.exited(); ++f) {
       for (const auto& [at, code] : keys)
         if (at == f) m.key(static_cast<oracle::u8>(code));
-      if (flip >= 0 && f > play::from) {
-        auto random = [&] { rng = rng * play::lcgMul + play::lcgAdd; return rng >> 16; };
-        if (random() % play::flipperOdds == 0) { left = !left; m.key(left ? scan::leftShift : scan::leftShiftUp); }
-        if (random() % play::flipperOdds == 0) { right = !right; m.key(right ? scan::rightShift : scan::rightShiftUp); }
+      if (flip >= 0 && f > 400) {
+        auto random = [&] { rng = rng * 1664525u + 1013904223u; return rng >> 16; };
+        if (random() % 23 == 0) { left = !left; m.key(left ? scan::leftShift : scan::leftShiftUp); }
+        if (random() % 23 == 0) { right = !right; m.key(right ? scan::rightShift : scan::rightShiftUp); }
         // and keeps the game going: enter now and then, the plunger pulled and let go
-        if (f % play::enterEvery == 0) m.key(scan::enter);
-        if (f % play::enterEvery == play::enterHeld) m.key(scan::enterUp);
-        if (f % play::plungerEvery == play::plungerAt) { m.key(scan::extended); m.key(scan::down); }
-        if (f % play::plungerEvery == play::plungerAt + static_cast<int>(random() % play::plungerHeldRange) + play::plungerHeldMin) { m.key(scan::extended); m.key(scan::downUp); }
-        if (random() % play::nudgeOdds == 0) m.key(scan::space);
-        if (random() % play::nudgeOdds == 1) m.key(scan::spaceUp);
+        if (f % 900 == 0) m.key(scan::enter);
+        if (f % 900 == 5) m.key(scan::enterUp);
+        if (f % 300 == 100) { m.key(scan::extended); m.key(scan::down); }
+        if (f % 300 == 100 + static_cast<int>(random() % 60) + 20) { m.key(scan::extended); m.key(scan::downUp); }
+        if (random() % 400 == 0) m.key(scan::space);
+        if (random() % 400 == 1) m.key(scan::spaceUp);
       }
       m.frame();
       if (!peeks.empty()) {
@@ -92,7 +91,7 @@ int main(int argc, char** argv) {
                 m.cpu.s[oracle::Cpu::CS], m.cpu.ip);
     if (coverageFile) {
       if (std::FILE* out = std::fopen(coverageFile, "w")) {
-        for (unsigned a = 0; a < oracle::kSegmentBytes; ++a)
+        for (unsigned a = 0; a < 0x10000; ++a)
           if (coverage[a]) std::fprintf(out, "%04x\n", a);
         std::fclose(out);
       }
@@ -101,10 +100,10 @@ int main(int argc, char** argv) {
       const int height = 350;
       const auto pic = m.vga.picture(height);
       using oracle::Vga;
-      encore::Bytes rgb(static_cast<std::size_t>(Vga::kWidth * height * Vga::kColourBytes));
+      encore::Bytes rgb(static_cast<std::size_t>(320 * height * 3));
       for (std::size_t i = 0; i < pic.size(); ++i)
-        for (std::size_t c = 0; c < Vga::kColourBytes; ++c) rgb[i * Vga::kColourBytes + c] = static_cast<encore::u8>(m.vga.dac[pic[i] * 3u + c] * UINT8_MAX / Vga::kDacMax);
-      encore::writeRgbPng(png, rgb.data(), Vga::kWidth, height);
+        for (std::size_t c = 0; c < 3; ++c) rgb[i * 3 + c] = static_cast<encore::u8>(m.vga.dac[pic[i] * 3u + c] * UINT8_MAX / 0x3f);
+      encore::writeRgbPng(png, rgb.data(), 320, height);
     }
   } catch (const std::exception& e) {
     std::printf("stopped at frame %u: %s\n%s\n", m.frames, e.what(), m.cpu.history().c_str());

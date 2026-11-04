@@ -6,8 +6,6 @@
 namespace encore {
 namespace {
 
-constexpr u8 kNibble = 0x0f;  ///< a decimal digit's four bits
-constexpr u8 kDecimalAdjust = 6;  ///< what the 8086's DAA adds to a digit past nine
 constexpr u8 kRowEnd = 0xff;  ///< ends a row of lights (nextOfRow)
 
 }  // namespace
@@ -17,9 +15,9 @@ void Engine::newGame() {
   CB(at::keysOn) = kSet;
   B(at::enterAttract) = 0;
   B(at::ball) = 1;
-  B(at::ballDigit) = static_cast<u8>(B(at::ball) + glyph::digit0);
+  B(at::ballDigit) = static_cast<u8>(B(at::ball) + 0x37);
   B(at::player) = 1;
-  B(at::playerDigit) = static_cast<u8>(B(at::player) + glyph::digit0);
+  B(at::playerDigit) = static_cast<u8>(B(at::player) + 0x37);
   B(at::codeChanged) = kSet;
   // The original adds up a stretch of its own code here, to see that nobody has changed it,
   // and only then lets players be added and the high scores stand.
@@ -49,7 +47,7 @@ void Engine::beginBall() {
   B(at::scriptEnded) = kSet;
   stopBlinks();
   for (u16 i = 0, slots = kw(at::timerSlotsInsn, 1); i < slots; ++i) W(at::timers, static_cast<u16>(i * 2)) = F(at::nothing);  // cs:3870
-  for (u16 i = 0; i < kTimerCounters; ++i) W(at::counters, static_cast<u16>(i * 2)) = 0;          // cs:37dd
+  for (u16 i = 0; i < 0x32; ++i) W(at::counters, static_cast<u16>(i * 2)) = 0;          // cs:37dd
   if (B(at::specialPlungerEvent) == kSet) return;
   B(at::flashing) = 0;
   displaySteady();
@@ -57,7 +55,7 @@ void Engine::beginBall() {
     B(at::inGameStart) = 0;
     return;
   }
-  for (u16 i = 0; i < kScoreDigits; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;
+  for (u16 i = 0; i < 12; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;
   W(at::scoreDrawnGroups) = 0;
   startScript(A(at::scriptMain));
 }
@@ -75,9 +73,9 @@ void Engine::lightsOut() {
     B(at::lightStates, light) = 0;
     u16 record = W(at::lightRecords, static_cast<u16>((light - 1) * 2));
     B(at::lightsOutInterrupted) = 0;
-    std::size_t colour = std::size_t{nativeB(record++)} * video::colourBytes;
+    std::size_t colour = std::size_t{nativeB(record++)} * 3;
     const u8 count = nativeB(record++);
-    for (u8 i = 0; i < count; ++i, ++colour) dac_[colour % video::paletteBytes] = (nativeB(record++) >> 1) & video::colourMax;
+    for (u8 i = 0; i < count; ++i, ++colour) dac_[colour % 768] = (nativeB(record++) >> 1) & 0x3f;
   }
 }
 
@@ -90,9 +88,9 @@ void Engine::lightsDark() {
   for (u16 light = 1, lights = kw(at::lightCountOutInsn, 1); light <= lights; ++light) {
     u16 record = W(at::lightRecords, static_cast<u16>((light - 1) * 2));
     B(at::lightsOutInterrupted) = 0;
-    std::size_t colour = std::size_t{nativeB(record++)} * video::colourBytes;
+    std::size_t colour = std::size_t{nativeB(record++)} * 3;
     const u8 count = nativeB(record++);
-    for (u8 i = 0; i < count; ++i, ++colour) dac_[colour % video::paletteBytes] = (nativeB(record++) >> 1) & video::colourMax;
+    for (u8 i = 0; i < count; ++i, ++colour) dac_[colour % 768] = (nativeB(record++) >> 1) & 0x3f;
   }
 }
 
@@ -117,21 +115,21 @@ bool Engine::music(u16 record) {
 void Engine::addScore(u16 to, u16 amount) {
   if (debugWatch == kDebugTrace) {
     std::fprintf(stderr, "[ours] addScore to %04x from %04x:", to, amount);
-    for (int i = 0; i < kScoreDigits; ++i) std::fprintf(stderr, "%d", nativeB(static_cast<u16>(amount + i)));
+    for (int i = 0; i < 12; ++i) std::fprintf(stderr, "%d", nativeB(static_cast<u16>(amount + i)));
     std::fprintf(stderr, "\n");
   }
   // Digit by digit from the right, as the original's "add, then adjust to a decimal digit".
   u8 carry = 0;
-  for (int i = kScoreDigits - 1; i >= 0; --i) {
+  for (int i = 11; i >= 0; --i) {
     const u8 a = nativeB(static_cast<u16>(to + i)), b = nativeB(static_cast<u16>(amount + i));
     u8 sum = static_cast<u8>(a + b + carry);
-    const bool half = (a & kNibble) + (b & kNibble) + carry > kNibble;
+    const bool half = (a & 0x0f) + (b & 0x0f) + carry > 0x0f;
     carry = 0;
-    if ((sum & kNibble) > kDecimal - 1 || half) {
-      sum = static_cast<u8>(sum + kDecimalAdjust);
+    if ((sum & 0x0f) > 9 || half) {
+      sum = static_cast<u8>(sum + 6);
       carry = 1;
     }
-    nativeB(static_cast<u16>(to + i)) = sum & kNibble;
+    nativeB(static_cast<u16>(to + i)) = sum & 0x0f;
   }
 }
 
@@ -195,7 +193,7 @@ void Engine::placeBall(u16 x, u16 y) {
   W(at::ballX) = x;
   W(at::ballY) = y;
   B(at::layer) = 0;
-  const u32 fx = u32{x} * playfield::fixedOne, fy = u32{y} * playfield::fixedOne;
+  const u32 fx = u32{x} * 0x400, fy = u32{y} * 0x400;
   W(at::ballXFixed) = static_cast<u16>(fx);
   W(at::ballXFixed, 2) = static_cast<u16>(fx >> 16);
   W(at::ballYFixed) = static_cast<u16>(fy);
@@ -208,7 +206,7 @@ void Engine::placeBall(u16 x, u16 y) {
 void Engine::patchMask(u16 segment, u16 at, u16 shape, u16 width, u16 rows) { copyShape(S(segment), at, shape, width, rows, width); }
 
 void Engine::copyShape(u16 native, u16 at, u16 shape, u16 width, u16 rows, u16 step) {
-  for (u16 r = 0; r < rows; ++r, at = static_cast<u16>(at + playfield::maskRow), shape = static_cast<u16>(shape + step))
+  for (u16 r = 0; r < rows; ++r, at = static_cast<u16>(at + 0x28), shape = static_cast<u16>(shape + step))
     for (u16 x = 0; x < width; ++x) {
       const u8 v = nativeB(static_cast<u16>(shape + x));
       farB(native, static_cast<u16>(at + x)) = v;
@@ -233,16 +231,16 @@ void Engine::bindGame() {
       if (w.at == at::cheatEarthquake) B(at::noTilt) = kSet;
       startScript(A(w.script));
       if (w.at == at::cheatSnail) B(at::keys) |= keyBits::oneStep;
-      if (w.at == at::cheatExtraBalls) B(at::balls) = ballsPerGame::more;
+      if (w.at == at::cheatExtraBalls) B(at::balls) = 5;
       if (w.at == at::cheatFairPlay) {  // and back to as it was
         B(at::keys) &= static_cast<u8>(~keyBits::oneStep);
         B(at::noTilt) = 0;
-        B(at::balls) = ballsPerGame::usual;
+        B(at::balls) = 3;
       }
     });
   }
   bind(at::setStartKeysActiveTimer, [this] {  // players may be added again a moment after the last
-    if (!countTo(A(at::setStartKeysActiveCounter), frames::setStartKeysActive)) return;
+    if (!countTo(A(at::setStartKeysActiveCounter), 0x0f)) return;
     B(at::playersMayJoin) = kSet;
     endTimer();
   });

@@ -17,51 +17,8 @@ TableScreen::TableScreen(Bytes prg, int table)
 
 namespace {
 
-constexpr int kMostFlippers = 3;  ///< a table's flippers have their pictures in three places
 /// A flipper record's side (flipperRec::side) when it is one of the left key's.
 constexpr u8 kLeftSide = 2;
-/// A served ball is put this far to the right of where it was hidden, in dots.
-constexpr int kServedNearest = 8, kServedFarthest = 24;
-/// A colour of the palette is three bytes; each of them goes to 0x3f. (A byte divided by 3 is
-/// written as the number: GCC divides a byte by a number in 8 bits, by a name in 32.)
-constexpr int kColourBytes = 3, kDacMax = 0x3f;
-/// What hides the ball: a dot hidden on three of its four sides as well is solid; others are
-/// as hidden as the dots within two of them on average, out of 255.
-constexpr int kSolidSides = 3, kCoverReach = 2, kFullCover = 255;
-/// The outline drawn round a flipper, which its shape for the ball does not have: two dots.
-constexpr int kOutline = 2;
-/// Angles, in radians.
-constexpr double kPi = 3.14159265, kHalfPi = 1.57079633, kTenDegrees = 0.17453293;
-constexpr float kPiF = 3.14159265f, kTwoPiF = 6.2831853f;
-/// The axis fitted from a flipper's pictures stands if it is this near the table's, in dots.
-constexpr double kAxisNear = 8;
-/// The flipper's far end: its dots this far out of the farthest.
-constexpr double kFarEnd = 0.85;
-/// A flipper's position counts so much from one of its pictures to the next.
-constexpr int kPositionsAPicture = 55;
-/// A gap in a lamp's dither is the lamp's if three of its four neighbours are.
-constexpr int kDitherSides = 3;
-/// The original turns a flipper by lists, nine at most at a time: a list begins with nine
-/// counts, a word each, then its entries: where a group of four dots goes, and where it comes from.
-constexpr int kMostLists = 9, kListCounts = 0x12, kEntrySize = 4;
-constexpr u16 kEntryFrom = 2;
-/// A dot's light, from the dots around it: nine of them.
-constexpr int kAround = 9;
-/// The plunger's picture is pulled down by half the pull, less three.
-constexpr int kPullAtRest = 3;
-/// A ball leaving by the bottom is drawn this many rows past the picture.
-constexpr int kShakenRows = 4;
-/// The ball is fifteen dots across and down.
-constexpr int kBallSize = 15;
-constexpr float kBallHalf = 7.5f, kBallSizeF = 15.0f;
-/// The ball's steps are kept in 1024ths of a dot.
-constexpr float kStepUnit = 1024.0f;
-/// Its trail: none where the ball has moved less than so far, in dots; so strong at most; and
-/// strongest from so far a step on.
-constexpr float kTrailStill = 0.4f, kTrailStrength = 0.22f, kTrailFull = 2.5f;
-/// A cut out picture's dots: red, green, blue and how solid; and solid.
-constexpr int kRgba = 4;
-constexpr int kSolid = 0xff;
 
 /// Marks everything a shape encloses, by flooding what is outside it instead.
 void fillEnclosed(u8* mask, int w, int h) {
@@ -99,9 +56,9 @@ void TableScreen::attach(Engine& engine) {
   // Each flipper's shape at every step of its travel, from the pictures of it that the ball is
   // stopped by: taken now, before the table's start-up adds the wall round it to them (cs:3d81).
   art_.clear();
-  const u16 pictures[kMostFlippers] = {engine.S(at::leftFlipperMasks), engine.S(at::rightFlipperMasks), engine.S(at::thirdFlipperMasks)};
+  const u16 pictures[3] = {engine.S(at::leftFlipperMasks), engine.S(at::rightFlipperMasks), engine.S(at::thirdFlipperMasks)};
   int which = 0;
-  for (u16 f = engine.A(at::flippers); which < kMostFlippers && engine.nativeB(f) != 0; f = static_cast<u16>(f + flipperRec::size), ++which) {
+  for (u16 f = engine.A(at::flippers); which < 3 && engine.nativeB(f) != 0; f = static_cast<u16>(f + flipperRec::size), ++which) {
     FlipperArt art;
     const int bytes = engine.nativeW(static_cast<u16>(f + flipperRec::width)) * 2;
     art.record = f;
@@ -176,7 +133,7 @@ void TableScreen::followServe(Engine& e) {
   const bool hidden = e.B(at::ballHidden) == kSet;
   // (served: hidden the frame before, shown now, the same row and a little to the right)
   const int jump = shown.ballX - servedFrom_[0];
-  if (wasHidden_ && !hidden && shown.ballY == servedFrom_[1] && jump >= kServedNearest && jump <= kServedFarthest) {
+  if (wasHidden_ && !hidden && shown.ballY == servedFrom_[1] && jump >= 8 && jump <= 24) {
     slideFrom_ = static_cast<float>(-jump);
     sliding_ = 0;
   }
@@ -193,7 +150,6 @@ void TableScreen::followServe(Engine& e) {
 /// Where in the cover's segment (at::coverGround) the maps of what covers the ball begin.
 namespace coverMap {
 constexpr u16 playfield = 0x0100, ramps = 0x5f80;
-constexpr int rowBytes = 42;  ///< a row of the map, a bit a dot
 }  // namespace coverMap
 
 /// What the artwork covers of the ball. The original hides the ball dot by dot, and where
@@ -211,7 +167,7 @@ void TableScreen::buildCover(Engine& e) {
     Bytes hides(static_cast<std::size_t>(kWidth) * TableData::kHeight);
     for (int y = 0; y < TableData::kHeight; ++y)
       for (int x = 0; x < kWidth; ++x)
-        hides[static_cast<std::size_t>(y) * kWidth + x] = (e.farB(maps, static_cast<u16>(map + y * coverMap::rowBytes + (x >> 3))) & (0x80 >> (x & 7))) ? 1 : 0;
+        hides[static_cast<std::size_t>(y) * kWidth + x] = (e.farB(maps, static_cast<u16>(map + y * 42 + (x >> 3))) & (0x80 >> (x & 7))) ? 1 : 0;
     auto at = [&](int x, int y) { return hides[static_cast<std::size_t>(y) * kWidth + x] != 0; };
     hides_[layer] = hides;
     cover_[layer].assign(hides.size(), 0);
@@ -222,16 +178,16 @@ void TableScreen::buildCover(Engine& e) {
         if (x < kWidth - 1) near += at(x + 1, y);
         if (y > 0) near += at(x, y - 1);
         if (y < TableData::kHeight - 1) near += at(x, y + 1);
-        int cover = kFullCover;
-        if (!at(x, y) || near < kSolidSides) {
+        int cover = 255;
+        if (!at(x, y) || near < 3) {
           int covered = 0, counted = 0;
-          for (int ny = y - kCoverReach; ny <= y + kCoverReach; ++ny)
-            for (int nx = x - kCoverReach; nx <= x + kCoverReach; ++nx) {
+          for (int ny = y - 2; ny <= y + 2; ++ny)
+            for (int nx = x - 2; nx <= x + 2; ++nx) {
               if (nx < 0 || nx >= kWidth || ny < 0 || ny >= TableData::kHeight) continue;
               covered += at(nx, ny);
               ++counted;
             }
-          cover = covered * kFullCover / counted;
+          cover = covered * 255 / counted;
         }
         cover_[layer][static_cast<std::size_t>(y) * kWidth + x] = static_cast<u8>(cover);
       }
@@ -271,7 +227,7 @@ void TableScreen::buildFlipperArt(Engine& e) {
     art.rest.assign(pixels, 0);
     std::vector<u8> known(pixels, 0);
     for (std::size_t p = 0; p < pixels; ++p) {
-      std::array<u8, kColours> count{};
+      std::array<u8, 256> count{};
       u8 commonest = 0;
       for (std::size_t q = 0; q < static_cast<std::size_t>(steps); ++q) {
         if (coveredAt[q * pixels + p]) {
@@ -314,8 +270,8 @@ void TableScreen::buildFlipperArt(Engine& e) {
         for (int x = 0; x < w; ++x) {
           const std::size_t p = static_cast<std::size_t>(y) * w + x;
           if (covered[p] || drawn[q][p] == art.background[p]) continue;
-          for (int dy = -kOutline; dy <= kOutline; ++dy)
-            for (int dx = -kOutline; dx <= kOutline; ++dx) {
+          for (int dy = -2; dy <= 2; ++dy)
+            for (int dx = -2; dx <= 2; ++dx) {
               const int nx = x + dx, ny = y + dy;
               if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
               if (covered[static_cast<std::size_t>(ny) * w + nx]) grown[p] = 1;
@@ -358,16 +314,16 @@ void TableScreen::buildFlipperArt(Engine& e) {
     if (steps > 1) {
       const auto m0 = moments(&coveredAt[0]), m1 = moments(&coveredAt[static_cast<std::size_t>(steps - 1) * pixels]);
       double turn = m1[2] - m0[2];
-      while (turn > kHalfPi) turn -= kPi;
-      while (turn < -kHalfPi) turn += kPi;
+      while (turn > 1.57079633) turn -= 3.14159265;
+      while (turn < -1.57079633) turn += 3.14159265;
       // A shape that hardly turns says little about where its axis is; then the table's place stands.
-      if (std::abs(turn) > kTenDegrees) {
+      if (std::abs(turn) > 0.17453293) {
         const double c = std::cos(turn), s = std::sin(turn);
         const double bx = m1[0] - (c * m0[0] - s * m0[1]), by = m1[1] - (s * m0[0] + c * m0[1]);
         const double d = (1 - c) * (1 - c) + s * s;
         const double ax = ((1 - c) * bx - s * by) / d, ay = (s * bx + (1 - c) * by) / d;
         // ... and neither does a fit that lands somewhere the hinge cannot be.
-        if (std::hypot(ax - ox, ay - oy) < kAxisNear && ax >= 0 && ay >= 0 && ax < w && ay < h) {
+        if (std::hypot(ax - ox, ay - oy) < 8 && ax >= 0 && ay >= 0 && ax < w && ay < h) {
           ox = ax;
           oy = ay;
         }
@@ -389,7 +345,7 @@ void TableScreen::buildFlipperArt(Engine& e) {
       for (int y = 0; y < h; ++y)
         for (int x = 0; x < w; ++x) {
           if (!covered[static_cast<std::size_t>(y) * w + x]) continue;
-          if (std::hypot(x - ox, y - oy) < kFarEnd * far) continue;
+          if (std::hypot(x - ox, y - oy) < 0.85 * far) continue;
           sx += x - ox;
           sy += y - oy;
         }
@@ -433,15 +389,15 @@ void TableScreen::sharedFlipper(const FlipperArt& art, HdSprite& s) const {
 
 float TableScreen::flipperAngle(Engine& e, const FlipperArt& art) const {
   const int pos = std::max<int>(static_cast<i16>(e.nativeW(static_cast<u16>(art.record + flipperRec::position))), 0);
-  const std::size_t q = std::min<std::size_t>(static_cast<std::size_t>(pos / kPositionsAPicture), art.angle.size() - 1);
+  const std::size_t q = std::min<std::size_t>(static_cast<std::size_t>(pos / 55), art.angle.size() - 1);
   const std::size_t next = std::min<std::size_t>(q + 1, art.angle.size() - 1);
-  const float frac = static_cast<float>(pos % kPositionsAPicture) / static_cast<float>(kPositionsAPicture);
+  const float frac = static_cast<float>(pos % 55) / static_cast<float>(55);
   float step = art.angle[next] - art.angle[q];
-  if (step > kPiF) step -= kTwoPiF;  // the right flipper's angles cross half a turn
-  if (step < -kPiF) step += kTwoPiF;
+  if (step > 3.14159265f) step -= 6.2831853f;  // the right flipper's angles cross half a turn
+  if (step < -3.14159265f) step += 6.2831853f;
   float angle = art.angle[q] + step * frac - art.angle[0];
-  if (angle > kPiF) angle -= kTwoPiF;
-  if (angle < -kPiF) angle += kTwoPiF;
+  if (angle > 3.14159265f) angle -= 6.2831853f;
+  if (angle < -3.14159265f) angle += 6.2831853f;
   return angle;
 }
 
@@ -456,13 +412,13 @@ float TableScreen::flipperAngle(Engine& e, const FlipperArt& art) const {
 void TableScreen::buildLampAreas(Engine& e) {
   const int w = kWidth, h = TableData::kHeight;
   lampAreas_.assign(static_cast<std::size_t>(w) * h, 0);
-  std::array<u8, kColours> ofColour{};
+  std::array<u8, 256> ofColour{};
   lamps_.clear();
-  for (u16 light = 1, lights = e.kw(at::lightCountInsn, 1); light <= lights && light < kColours; ++light) {
+  for (u16 light = 1, lights = e.kw(at::lightCountInsn, 1); light <= lights && light < 256; ++light) {
     const u16 record = e.W(at::lightRecords, static_cast<u16>((light - 1) * 2));
     const u16 first = e.nativeB(static_cast<u16>(record + lightRec::firstColour)),
-              colours = static_cast<u16>(e.nativeB(static_cast<u16>(record + lightRec::bytes)) / 3);  // (kColourBytes, as a number)
-    for (u16 i = 0; i < colours && first + i < kColours; ++i) ofColour[first + i] = static_cast<u8>(light);
+              colours = static_cast<u16>(e.nativeB(static_cast<u16>(record + lightRec::bytes)) / 3);
+    for (u16 i = 0; i < colours && first + i < 256; ++i) ofColour[first + i] = static_cast<u8>(light);
     lamps_.push_back(record);
   }
   for (std::size_t p = 0; p < lampAreas_.size(); ++p) lampAreas_[p] = ofColour[data_.playfield[p]];
@@ -477,7 +433,7 @@ void TableScreen::buildLampAreas(Engine& e) {
         if (!lamp) continue;
         int same = 0;
         for (const u8 other : around) same += other == lamp;
-        if (same >= kDitherSides) {
+        if (same >= 3) {
           filled[p] = lamp;
           break;
         }
@@ -544,7 +500,7 @@ void TableScreen::buildLampAreas(Engine& e) {
       enclosed.clear();
       queue.assign(1, static_cast<int>(at(sx, sy)));
       seen[at(sx, sy)] = 1;
-      std::array<std::size_t, kColours> around{};
+      std::array<std::size_t, 256> around{};
       while (!queue.empty()) {
         const int p = queue.back();
         queue.pop_back();
@@ -589,7 +545,7 @@ void TableScreen::buildLampAreas(Engine& e) {
           }
         if (!count) continue;
         // Whichever lamp is nearest on the most sides.
-        std::array<std::size_t, kColours> tally{};
+        std::array<std::size_t, 256> tally{};
         u8 best = 0;
         for (std::size_t i = 0; i < count; ++i)
           if (++tally[near[i]] > tally[best]) best = near[i];
@@ -609,22 +565,22 @@ void TableScreen::turnFlipper(Engine& e, Bytes& picture, u16 record, u16 was, u1
   auto w = [&](u16 o) { return e.nativeW(static_cast<u16>(record + o)); };
   const u16 lists = e.S(at::flipperPictures);
   const auto& video = e.videoMemory();
-  const std::size_t base = static_cast<std::size_t>(w(flipperRec::y)) * kRowBytes + (w(flipperRec::x) >> 2);  // in groups of four dots
+  const std::size_t base = static_cast<std::size_t>(w(flipperRec::y)) * 0x54 + (w(flipperRec::x) >> 2);  // in groups of four dots
   const u16 stride = w(flipperRec::listSize);
   u16 list = now > was ? static_cast<u16>(was * stride + w(flipperRec::lists)) : static_cast<u16>(w(flipperRec::backLists) - was * stride);
   int steps = now > was ? now - was : was - now;
   while (steps > 0) {
-    int left = steps > kMostLists ? kMostLists : steps;
+    int left = steps > 9 ? 9 : steps;
     steps -= left;
     for (; left > 0; --left, list = static_cast<u16>(list + stride)) {
       const u16 count = e.farW(lists, static_cast<u16>(list + (left - 1) * 2));
       for (u16 i = 0; i < count; ++i) {
-        const u16 entry = static_cast<u16>(list + kListCounts + i * kEntrySize);
+        const u16 entry = static_cast<u16>(list + 0x12 + i * 4);
         const std::size_t to = base + e.farW(lists, entry);
-        const u16 from = e.farW(lists, static_cast<u16>(entry + kEntryFrom));
-        const std::size_t row = to / kRowBytes, column = to % kRowBytes;
-        if (row >= TableData::kHeight || column >= kShownBytes) continue;
-        for (std::size_t plane = 0; plane < kPlanes; ++plane) picture[row * kWidth + column * kPlanes + plane] = video[plane][from];
+        const u16 from = e.farW(lists, static_cast<u16>(entry + 2));
+        const std::size_t row = to / 0x54, column = to % 0x54;
+        if (row >= TableData::kHeight || column >= 80) continue;
+        for (std::size_t plane = 0; plane < 4; ++plane) picture[row * kWidth + column * 4 + plane] = video[plane][from];
       }
     }
   }
@@ -632,7 +588,7 @@ void TableScreen::turnFlipper(Engine& e, Bytes& picture, u16 record, u16 was, u1
 
 /// Which lamps are lit: a lamp's colours are as the table gives them when it is lit and half
 /// that when it is out (cs:5728, cs:5747), and the colours the video card now has say which.
-void TableScreen::lampsLit(Engine& e, int lamps, std::array<bool, kColours>& lit) const {
+void TableScreen::lampsLit(Engine& e, int lamps, std::array<bool, 256>& lit) const {
   lit.fill(false);
   const auto& dac = e.colours();
   for (std::size_t l = 0; l < lamps_.size(); ++l) {
@@ -640,8 +596,8 @@ void TableScreen::lampsLit(Engine& e, int lamps, std::array<bool, kColours>& lit
     const u16 colour = e.nativeB(static_cast<u16>(record + lightRec::firstColour));
     int best = 0;
     bool on = false;
-    for (u16 part = 0; part < kColourBytes && e.nativeB(static_cast<u16>(record + lightRec::bytes)) >= kColourBytes; ++part) {
-      const int full = e.nativeB(static_cast<u16>(record + lightRec::colours + part)) & kDacMax, half = full >> 1;
+    for (u16 part = 0; part < 3 && e.nativeB(static_cast<u16>(record + lightRec::bytes)) >= 3; ++part) {
+      const int full = e.nativeB(static_cast<u16>(record + lightRec::colours + part)) & 0x3f, half = full >> 1;
       if (full - half <= best) continue;
       best = full - half;
       on = dac[colour * 3u + part] * 2 > full + half;
@@ -651,19 +607,19 @@ void TableScreen::lampsLit(Engine& e, int lamps, std::array<bool, kColours>& lit
 }
 
 void TableScreen::colours(Engine& e, Rgb* out, int lamps) const {
-  std::array<u8, kDacBytes> dac = e.colours();
+  std::array<u8, 768> dac = e.colours();
   if (lamps != kLampsAsGame)
     for (u16 light = 1, lights = e.kw(at::lightCountInsn, 1); light <= lights; ++light) {
       u16 record = e.W(at::lightRecords, static_cast<u16>((light - 1) * 2));
-      u16 at = static_cast<u16>(e.nativeB(record++) * kColourBytes);
+      u16 at = static_cast<u16>(e.nativeB(record++) * 3);
       const u8 bytes = e.nativeB(record++);
-      for (u8 i = 0; i < bytes && at < kDacBytes; ++i, ++at) {
-        const u8 full = e.nativeB(record++) & kDacMax;
+      for (u8 i = 0; i < bytes && at < 768; ++i, ++at) {
+        const u8 full = e.nativeB(record++) & 0x3f;
         dac[at] = lamps == kLampsLit ? full : full >> 1;
       }
     }
   auto wide = [](u8 v) { return static_cast<u8>((v << 2) | (v >> 4)); };  // 0-63 as 0-255
-  for (std::size_t i = 0; i < kColours; ++i) out[i] = Rgb{wide(dac[i * 3]), wide(dac[i * 3 + 1]), wide(dac[i * 3 + 2])};
+  for (std::size_t i = 0; i < 256; ++i) out[i] = Rgb{wide(dac[i * 3]), wide(dac[i * 3 + 1]), wide(dac[i * 3 + 2])};
 }
 
 void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
@@ -688,7 +644,7 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
     const auto on = static_cast<u16>(static_cast<int>(HdPicture::Playfield1On) + data_.index);
     hd->used |= (1u << off) | (1u << on);
     hd->size[off] = hd->size[on] = {static_cast<u16>(kWidth), static_cast<u16>(TableData::kHeight)};
-    std::array<bool, kColours> lampLit;
+    std::array<bool, 256> lampLit;
     lampsLit(e, v.lamps, lampLit);
     for (int y = 0; y < view; ++y) {
       const int row = top + y;
@@ -699,7 +655,7 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
         for (int ny = std::max(row - 1, 0); ny <= std::min(row + 1, TableData::kHeight - 1); ++ny)
           for (int nx = std::max(x - 1, 0); nx <= std::min(x + 1, kWidth - 1); ++nx)
             around += lampLit[lampAreas_[static_cast<std::size_t>(ny) * kWidth + nx]];
-        const u16 lit = static_cast<u16>(around * HdFrame::kLitMax / kAround);
+        const u16 lit = static_cast<u16>(around * HdFrame::kLitMax / 9);
         out[x] = {static_cast<u16>(x * 8), static_cast<u16>(row * 8), static_cast<u16>(off | (lit << HdFrame::kLitShift)), 0};
       }
     }
@@ -731,8 +687,8 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
   {
     const int width = e.kw(at::plungerWidthInsn, 1), rows = e.kw(at::plungerPulledRowsInsn, 1);
     const int at = e.kw(at::plungerVideoAtInsn, 1) - video::picture;  // where in the video card's memory, past the display
-    const int row0 = at / kRowBytes, x0 = (at % kRowBytes) * kPlanes;
-    const int pull = static_cast<i8>((e.B(at::plungerPull) >> 1) - kPullAtRest);
+    const int row0 = at / 0x54, x0 = (at % 0x54) * 4;
+    const int pull = static_cast<i8>((e.B(at::plungerPull) >> 1) - 3);
     const int down = pull < 0 ? 0 : pull, skip = pull < 0 ? -pull : 0;
     const auto plunger = static_cast<u16>(HdPicture::Plunger);
     if (hd) {
@@ -767,8 +723,8 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
         const int px = shown.ballX + static_cast<int>(std::lround(slideX_)) + x, py = shown.ballY + y;
         // (a ball leaving by the bottom is still drawn in the few rows past the picture that a
         // shaken table shows)
-        if (px < 0 || px >= kWidth || py < 0 || py >= TableData::kHeight + kShakenRows) continue;
-        if (e.farB(maps, static_cast<u16>(map + py * coverMap::rowBytes + (px >> 3))) & (0x80 >> (px & 7))) continue;
+        if (px < 0 || px >= kWidth || py < 0 || py >= TableData::kHeight + 4) continue;
+        if (e.farB(maps, static_cast<u16>(map + py * 42 + (px >> 3))) & (0x80 >> (px & 7))) continue;
         put(px, py, ball_.at(x, y));
       }
   }
@@ -806,7 +762,7 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
       auto fine = [&](u16 fixed, u16 whole) {
         const i32 v = static_cast<i32>(u32{e.W(fixed)} | (u32{e.W(fixed, 2)} << 16));
         const u16 w = e.W(whole);
-        return static_cast<u16>(v / 0x400) == w ? static_cast<float>(v) / kStepUnit - kTouches : static_cast<float>(static_cast<i16>(w));
+        return static_cast<u16>(v / 0x400) == w ? static_cast<float>(v) / 1024.0f - kTouches : static_cast<float>(static_cast<i16>(w));
       };
       // (short of where it is while a served ball rolls out: followServe)
       const float bx = fine(at::ballXFixed, at::ballX) + slideX_, by = fine(at::ballYFixed, at::ballY) + lift;
@@ -819,10 +775,10 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
       constexpr int kMargin = 3;
       auto cover = [&](float fx, float fy) {
         const int px = static_cast<int>(std::lround(fx)), py = static_cast<int>(std::lround(fy));
-        for (int oy = -kMargin; oy < kBallSize + kMargin; ++oy) {
+        for (int oy = -kMargin; oy < 15 + kMargin; ++oy) {
           const int sy = py + oy, y = sy - top;
           if (y < 0 || y >= view || sy < 0 || sy >= TableData::kHeight) continue;
-          for (int ox = -kMargin; ox < kBallSize + kMargin; ++ox) {
+          for (int ox = -kMargin; ox < 15 + kMargin; ++ox) {
             const int x = px + ox;
             if (x < 0 || x >= kWidth) continue;
             const std::size_t p = static_cast<std::size_t>(sy) * kWidth + x;
@@ -835,10 +791,10 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
       auto ball = [&](float x, float y, float opacity) {
         HdSprite s;
         s.picture = HdSprite::kBall;
-        s.pivotFrameX = x + kBallHalf;
-        s.pivotFrameY = y - static_cast<float>(top) + kBallHalf;
+        s.pivotFrameX = x + 7.5f;
+        s.pivotFrameY = y - static_cast<float>(top) + 7.5f;
         s.pivotSpriteX = s.pivotSpriteY = 0.5f;
-        s.scaleX = s.scaleY = 1.0f / kBallSizeF;
+        s.scaleX = s.scaleY = 1.0f / 15.0f;
         s.clipTop = 0;
         s.clipBottom = static_cast<float>(view);
         s.hiddenBy = HdPixel::kHidesBall;
@@ -851,15 +807,15 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
       const std::size_t kept = e.stepsKept(), length = kept > 0 ? kept - 1 : 0;
       for (std::size_t i = 0; v.ballTrail && i < length; ++i) {
         const Engine::Step& was = steps[Engine::kSteps - kept + i];
-        const float x = static_cast<float>(was.x) / kStepUnit - kTouches, y = static_cast<float>(was.y) / kStepUnit - kTouches + lift;
+        const float x = static_cast<float>(was.x) / 1024.0f - kTouches, y = static_cast<float>(was.y) / 1024.0f - kTouches + lift;
         // Strongest just behind the ball, fading away towards the oldest step.
         const float recent = static_cast<float>(i + 1) / static_cast<float>(length);
         const float away = std::hypot(x - bx, y - by);
         // Nothing where the ball has hardly moved, so that a ball at rest keeps to itself, and
         // the faster it goes the more of a trail it leaves.
-        if (away < kTrailStill) continue;
+        if (away < 0.4f) continue;
         cover(x, y);
-        ball(x, y, kTrailStrength * recent * recent * std::min(away / kTrailFull, 1.0f));
+        ball(x, y, 0.22f * recent * recent * std::min(away / 2.5f, 1.0f));
       }
       cover(bx, by);
       ball(bx, by, 1.0f);
@@ -871,7 +827,7 @@ void TableScreen::draw(Engine& e, u8* frame, const View& v, HdFrame* hd) const {
   const auto& video = e.videoMemory();
   for (int y = 0; y < kDisplayRows; ++y) {
     u8* out = frame + static_cast<std::size_t>(view + y) * kWidth;
-    for (int x = 0; x < kWidth; ++x) out[x] = video[static_cast<std::size_t>(x & 3)][static_cast<std::size_t>(y * kRowBytes + (x >> 2))];
+    for (int x = 0; x < kWidth; ++x) out[x] = video[static_cast<std::size_t>(x & 3)][static_cast<std::size_t>(y * 0x54 + (x >> 2))];
   }
   // The display above the playfield instead (View::displayTop): the whole frame drawn as above,
   // its last rows taken to the top, and all the rest -- the playfield, what the pictures drawn
@@ -903,16 +859,16 @@ std::vector<bool> TableScreen::flipperIsLeft(Engine& e) const {
 
 std::vector<Cutout> TableScreen::flipperPictures(Engine& e) const {
   std::vector<Cutout> out;
-  std::array<Rgb, kColours> colour;
+  std::array<Rgb, 256> colour;
   colours(e, colour.data());
   for (const FlipperArt& art : art_) {
     Cutout c;
     c.width = art.w;
     c.height = art.h;
-    c.rgba.assign(static_cast<std::size_t>(c.width * c.height * kRgba), 0);
+    c.rgba.assign(static_cast<std::size_t>(c.width * c.height * 4), 0);
     for (std::size_t i = 0; i < art.rest.size() && i < art.atRest.size(); ++i) {
       const Rgb rgb = colour[art.atRest[i]];
-      c.rgba[i * kRgba] = rgb.r, c.rgba[i * kRgba + 1] = rgb.g, c.rgba[i * kRgba + 2] = rgb.b, c.rgba[i * kRgba + 3] = art.rest[i] ? kSolid : 0;
+      c.rgba[i * 4] = rgb.r, c.rgba[i * 4 + 1] = rgb.g, c.rgba[i * 4 + 2] = rgb.b, c.rgba[i * 4 + 3] = art.rest[i] ? 0xff : 0;
     }
     out.push_back(std::move(c));
   }
@@ -922,17 +878,17 @@ std::vector<Cutout> TableScreen::flipperPictures(Engine& e) const {
 Cutout TableScreen::ballPicture(Engine& e) const {
   Cutout c;
   if (!ball_.valid()) return c;
-  std::array<Rgb, kColours> colour;
+  std::array<Rgb, 256> colour;
   colours(e, colour.data());
   c.width = ball_.width;
   c.height = ball_.height;
-  c.rgba.assign(static_cast<std::size_t>(c.width * c.height * kRgba), 0);
+  c.rgba.assign(static_cast<std::size_t>(c.width * c.height * 4), 0);
   for (int y = 0; y < c.height; ++y)
     for (int x = 0; x < c.width; ++x) {
       if (!ball_.covers(x, y)) continue;
       const std::size_t i = static_cast<std::size_t>(y * c.width + x);
       const Rgb rgb = colour[ball_.at(x, y)];
-      c.rgba[i * kRgba] = rgb.r, c.rgba[i * kRgba + 1] = rgb.g, c.rgba[i * kRgba + 2] = rgb.b, c.rgba[i * kRgba + 3] = kSolid;
+      c.rgba[i * 4] = rgb.r, c.rgba[i * 4 + 1] = rgb.g, c.rgba[i * 4 + 2] = rgb.b, c.rgba[i * 4 + 3] = 0xff;
     }
   return c;
 }

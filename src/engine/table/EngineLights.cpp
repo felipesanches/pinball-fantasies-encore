@@ -76,9 +76,9 @@ void Engine::flushColours() {
   if (CB(at::fading) != kSet) {
     for (u16 at = A(at::colourQueue); at != W(at::colourQueueEnd);) {
       B(at::coloursInterrupted) = 0;
-      std::size_t colour = std::size_t{nativeB(at++)} * video::colourBytes;
+      std::size_t colour = std::size_t{nativeB(at++)} * 3;
       const u8 count = nativeB(at++);
-      for (u8 i = 0; i < count; ++i, ++colour) dac_[colour % video::paletteBytes] = nativeB(at++) & video::colourMax;
+      for (u8 i = 0; i < count; ++i, ++colour) dac_[colour % 768] = nativeB(at++) & 0x3f;
     }
   }
   W(at::colourQueueEnd) = A(at::colourQueue);

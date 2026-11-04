@@ -28,13 +28,9 @@ namespace at {
 
 /// A DOS program's header (an .EXE's, which TABLEn.PRG is): where its fields are, in bytes.
 namespace mz {
-constexpr std::size_t leastBytes = 0x200;  ///< a header's page: a program is no shorter
 constexpr std::size_t relocations = 6;  ///< word: how many segment values DOS is to adjust
 constexpr std::size_t headerParagraphs = 8;  ///< word: the header's size
 constexpr std::size_t relocationTable = 0x18;  ///< word: where their places are listed,
-constexpr std::size_t relocationSize = 4;  ///< each an offset and a segment
-constexpr std::size_t paragraph = 16;  ///< bytes of a paragraph, which a segment value counts in
-constexpr std::size_t segmentBytes = 0x10000;
 }  // namespace mz
 
 /// The 8086's instructions, as far as the engine reads the program's own: the ones its
@@ -70,7 +66,6 @@ class Program {
     u8* p_;
   };
 
-  static constexpr int kTables = 4;
   /// `prg` is the whole TABLEn.PRG; `table` 0 to 3.
   Program(ByteView prg, int table);
   virtual ~Program() = default;
@@ -98,8 +93,8 @@ class Program {
   /// segment begin inside them (the Gameshow's map of where the ball is hidden does): what is
   /// there is the same memory.
   u8& farB(u16 nativeSegment, u16 offset) {
-    const std::size_t at = (std::size_t{static_cast<u16>(nativeSegment - kLoadSegment)} * mz::paragraph + offset) % image_.size();
-    if (const std::size_t d = at - std::size_t{dataSegment_} * mz::paragraph; d < mz::segmentBytes) return ds_[d];
+    const std::size_t at = (std::size_t{static_cast<u16>(nativeSegment - kLoadSegment)} * 16u + offset) % image_.size();
+    if (const std::size_t d = at - std::size_t{dataSegment_} * 16u; d < 0x10000u) return ds_[d];
     return image_[at];
   }
   Word farW(u16 nativeSegment, u16 offset) { return Word(&farB(nativeSegment, offset)); }

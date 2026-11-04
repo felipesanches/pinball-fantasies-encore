@@ -18,11 +18,6 @@ using i8 = std::int8_t;
 using i16 = std::int16_t;
 using i32 = std::int32_t;
 
-/// The bytes of a vector in the table at 0000:0000: the offset, then the segment.
-constexpr unsigned kVectorSize = 4;
-/// The offsets of a segment: 64 KB.
-constexpr int kSegmentBytes = 0x10000;
-
 /// The instructions, by their first byte. Where eight in a row take a register in their low
 /// three bits (inc, dec, push, pop, xchg, mov), the name is the first of them, and a register
 /// (Cpu::Reg, or Cpu::Reg8 for the bytes) is added to it.
@@ -88,21 +83,14 @@ class Cpu {
   /// The byte registers as the instructions number them: the low halves, then the high.
   enum Reg8 { AL, CL, DL, BL, AH, CH, DH, BH };
   enum Seg { ES, CS, SS, DS };
-  static constexpr int kRegs = 8, kSegRegs = 4;
   enum Flag : u16 { CF = 1, PF = 4, AF = 0x10, ZF = 0x40, SF = 0x80, TF = 0x100, IF = 0x200, DF = 0x400, OF = 0x800 };
-  /// Bit 1 of the flags, which is always set.
-  static constexpr u16 kFlagsFixed = 2;
-  /// The flags popf and iret can change (OF DF IF TF SF ZF AF PF CF), and those sahf can.
-  static constexpr u16 kFlagsWritable = 0x0fd5, kFlagsSahf = 0xd5;
-  /// The most instructions a routine called from outside may take to return.
-  static constexpr std::uint64_t kCallLimit = 50'000'000;
 
   explicit Cpu(Bus& bus) : bus_(bus) {}
 
-  u16 r[kRegs]{};
-  u16 s[kSegRegs]{};
+  u16 r[8]{};
+  u16 s[4]{};
   u16 ip = 0;
-  u16 flags = kFlagsFixed;
+  u16 flags = 2;
   bool halted = false;
   /// Called when the instruction at a place (segment << 16 | offset) is about to run.
   std::map<u32, std::function<void()>> watch;
@@ -137,9 +125,9 @@ class Cpu {
   /// Calls a far routine that ends with retf, as an interrupt handler of the machine would:
   /// every register is as it was afterwards. Throws if it has not returned after `limit`.
   /// Returns what the routine left in AX.
-  u16 callFar(u16 seg, u16 off, std::uint64_t limit = kCallLimit);
+  u16 callFar(u16 seg, u16 off, std::uint64_t limit = 50'000'000);
   /// The same for a routine that ends with iret (an interrupt vector).
-  u16 callInterrupt(u16 seg, u16 off, std::uint64_t limit = kCallLimit);
+  u16 callInterrupt(u16 seg, u16 off, std::uint64_t limit = 50'000'000);
   /// The vector in memory.
   void raise(u8 number);
 

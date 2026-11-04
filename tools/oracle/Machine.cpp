@@ -9,9 +9,6 @@ namespace {
 
 /// Where the program's prefix is, and its size in paragraphs: the program follows it.
 constexpr u16 kPsp = 0x0800;
-constexpr u16 kPspParagraphs = 0x10;
-constexpr int kParagraph = 16, kPage = 512;
-constexpr int kMemoryBytes = 0x100000;
 /// The video card's 64 KB at a000:0000.
 constexpr int kVideoWindow = 0xa0000, kVideoWindowEnd = 0xb0000;
 /// The first segment past the memory DOS gives out.
@@ -26,7 +23,6 @@ namespace mz {
 constexpr int lastPageBytes = 0x02, pages = 0x04, relocations = 0x06, headerParagraphs = 0x08;
 constexpr int minExtraParagraphs = 0x0a, ss = 0x0e, sp = 0x10, ip = 0x14, cs = 0x16, relocationTable = 0x18;
 constexpr int size = 0x1c;
-constexpr int relocationBytes = 4;  ///< an offset and a segment
 }  // namespace mz
 
 /// The flags a program starts with: interrupts on.
@@ -64,8 +60,6 @@ constexpr u16 fileNotFound = 2, badHandle = 6, notEnoughMemory = 8;
 constexpr u8 kSeekFromStart = 0, kSeekFromHere = 1;
 /// DOS 5.0, as function 0x30 says it: the major number in AL, the minor in AH.
 constexpr u16 kDosVersion = 0x0005;
-/// The longest file name read, and the longest message printed.
-constexpr int kMaxName = 128, kMaxMessage = 400;
 
 /// The sound driver's functions (int 66h, by AL), named as the engine's int66:: names them
 /// (engine/audio/MusicDriver.h) where it has them.
@@ -80,12 +74,6 @@ constexpr u8 setMasterVolume = 0x06, stop = 0x0f, jump = 0x10, playSfx = 0x11, l
 /// still sounds).
 constexpr u8 kStarted = 0, kSilentStatus = 0x0a;
 
-/// How long the machine waits, in instructions: for the start-up to reach the loop, for the
-/// program to turn interrupts back on, for a frame's turns of the loop.
-constexpr std::uint64_t kBootLimit = 400'000'000;
-constexpr int kInterruptsOffLimit = 100000;
-constexpr std::uint64_t kFrameLimit = 2'000'000;
-
 std::vector<u8> slurp(const std::filesystem::path& p) {
   std::ifstream f(p, std::ios::binary);
   if (!f) throw CpuError("cannot read " + p.string());
@@ -97,39 +85,39 @@ u16 le16(const std::vector<u8>& d, std::size_t at) { return static_cast<u16>(d[a
 }  // namespace
 
 Machine::Machine(const std::filesystem::path& gameDir, int table, const Config& config)
-    : dir_(gameDir), table_(table), config_(config), mem_(kMemoryBytes, 0) {
+    : dir_(gameDir), table_(table), config_(config), mem_(0x100000, 0) {
   const auto file = slurp(dir_ / ("TABLE" + std::to_string(table + 1) + ".PRG"));
   if (file.size() < mz::size || file[0] != 'M' || file[1] != 'Z') throw CpuError("not a program");
-  const std::size_t header = std::size_t{le16(file, mz::headerParagraphs)} * kParagraph;
+  const std::size_t header = std::size_t{le16(file, mz::headerParagraphs)} * 16;
   const std::size_t pages = le16(file, mz::pages), last = le16(file, mz::lastPageBytes);
-  const std::size_t size = pages * kPage - (last ? kPage - last : 0);
-  base_ = kPsp + kPspParagraphs;
-  std::memcpy(&mem_[std::size_t{base_} * kParagraph], &file[header], size - header);
+  const std::size_t size = pages * 512 - (last ? 512 - last : 0);
+  base_ = kPsp + 0x10;
+  std::memcpy(&mem_[std::size_t{base_} * 16], &file[header], size - header);
   for (int i = 0; i < le16(file, mz::relocations); ++i) {
-    const std::size_t entry = le16(file, mz::relocationTable) + std::size_t(i) * mz::relocationBytes;
-    const std::size_t at = std::size_t{base_} * kParagraph + std::size_t{le16(file, entry + 2)} * kParagraph + le16(file, entry);
+    const std::size_t entry = le16(file, mz::relocationTable) + std::size_t(i) * 4;
+    const std::size_t at = std::size_t{base_} * 16 + std::size_t{le16(file, entry + 2)} * 16 + le16(file, entry);
     const u16 v = static_cast<u16>(mem_[at] | (mem_[at + 1] << 8));
     mem_[at] = static_cast<u8>(v + base_);
     mem_[at + 1] = static_cast<u8>((v + base_) >> 8);
   }
   // What the program finds below itself: its prefix, and the BIOS's notes.
-  mem_[std::size_t{kPsp} * kParagraph] = op::intImm;
-  mem_[std::size_t{kPsp} * kParagraph + 1] = vec::terminate;
+  mem_[std::size_t{kPsp} * 16] = op::intImm;
+  mem_[std::size_t{kPsp} * 16 + 1] = vec::terminate;
   mem_[kBiosCrtcPort] = 0xd4;  // the video card's register port, 0x3d4 (vgaPort::crtcIndex)
   mem_[kBiosCrtcPort + 1] = 0x03;
   // The services answered here have vectors too, since the program calls some through them:
   // each points at "int n; iret".
   for (u8 n : {vec::video, vec::dos, vec::mouse, vec::launcher, vec::soundDriver}) {
-    const u32 stub = kStubs + n * kVectorSize;
+    const u32 stub = kStubs + n * 4u;
     mem_[stub] = op::intImm;
     mem_[stub + 1] = n;
     mem_[stub + 2] = op::iret;
-    mem_[n * kVectorSize] = static_cast<u8>(n * kVectorSize);
-    mem_[n * kVectorSize + 1] = static_cast<u8>((n * kVectorSize) >> 8);
-    mem_[n * kVectorSize + 2] = 0x00;  // the segment, f000
-    mem_[n * kVectorSize + 3] = 0xf0;
+    mem_[n * 4u] = static_cast<u8>(n * 4u);
+    mem_[n * 4u + 1] = static_cast<u8>((n * 4u) >> 8);
+    mem_[n * 4u + 2] = 0x00;  // the segment, f000
+    mem_[n * 4u + 3] = 0xf0;
   }
-  nextFree_ = static_cast<u16>(base_ + (size - header + 15) / kParagraph + le16(file, mz::minExtraParagraphs) + 1);
+  nextFree_ = static_cast<u16>(base_ + (size - header + 15) / 16 + le16(file, mz::minExtraParagraphs) + 1);
 
   cpu.s[Cpu::DS] = cpu.s[Cpu::ES] = kPsp;
   cpu.s[Cpu::SS] = static_cast<u16>(base_ + le16(file, mz::ss));
@@ -140,13 +128,13 @@ Machine::Machine(const std::filesystem::path& gameDir, int table, const Config& 
 }
 
 u8 Machine::read(u32 a) {
-  a &= kAddressMask;
+  a &= 0xfffff;
   if (a >= kVideoWindow && a < kVideoWindowEnd) return vga.read(a - kVideoWindow);
   return mem_[a];
 }
 
 void Machine::write(u32 a, u8 v) {
-  a &= kAddressMask;
+  a &= 0xfffff;
   if (a >= kVideoWindow && a < kVideoWindowEnd) vga.write(a - kVideoWindow, v);
   else {
     if (a == watchWrite) std::fprintf(stderr, "[write] %05x = %02x at %s (frame %u)\n", a, v, cpu.where().c_str(), frames);
@@ -171,7 +159,7 @@ void Machine::portOut(u16 port, u8 v) {
 
 std::string Machine::string0(u16 seg, u16 off) const {
   std::string s;
-  for (int i = 0; i < kMaxName; ++i) {
+  for (int i = 0; i < 128; ++i) {
     const u8 c = peek8(seg, static_cast<u16>(off + i));
     if (!c) break;
     s += static_cast<char>(c);
@@ -193,7 +181,7 @@ bool Machine::interrupt(u8 n) {
     case vec::soundDriver: driver(); return true;
     default:
       // A vector the program set itself goes through memory.
-      if (peek16(0, static_cast<u16>(n * kVectorSize)) || peek16(0, static_cast<u16>(n * kVectorSize + 2))) return false;
+      if (peek16(0, static_cast<u16>(n * 4)) || peek16(0, static_cast<u16>(n * 4 + 2))) return false;
       throw CpuError("interrupt " + std::to_string(n) + " with nothing to answer it, at " + cpu.where());
   }
 }
@@ -207,10 +195,10 @@ void Machine::launcher() {
       cpu.setLo(Cpu::BX, static_cast<u8>(table_ + 1));
       break;
     case int65::readConfig:
-      for (int i = 0; i < kConfigBytes; ++i) write(u32{cpu.s[Cpu::ES]} * kParagraph + static_cast<u16>(cpu.r[Cpu::BX] + i), config_.bytes[i]);
+      for (int i = 0; i < 6; ++i) write(u32{cpu.s[Cpu::ES]} * 16 + static_cast<u16>(cpu.r[Cpu::BX] + i), config_.bytes[i]);
       break;
     case int65::storeConfig:
-      for (int i = 0; i < kConfigBytes; ++i) config_.bytes[i] = peek8(cpu.s[Cpu::ES], static_cast<u16>(cpu.r[Cpu::BX] + i));
+      for (int i = 0; i < 6; ++i) config_.bytes[i] = peek8(cpu.s[Cpu::ES], static_cast<u16>(cpu.r[Cpu::BX] + i));
       break;
     case int65::readKey: cpu.setLo(Cpu::AX, 0); break;
     case int65::next: break;
@@ -225,7 +213,7 @@ void Machine::dos() {
   switch (ah) {
     case dosFn::print: {  // a string ending in $
       std::string s;
-      for (int i = 0; i < kMaxMessage; ++i) {
+      for (int i = 0; i < 400; ++i) {
         const u8 c = peek8(cpu.s[Cpu::DS], static_cast<u16>(cpu.r[Cpu::DX] + i));
         if (c == '$') break;
         s += static_cast<char>(c);
@@ -234,14 +222,14 @@ void Machine::dos() {
       break;
     }
     case dosFn::setVector:
-      mem_[cpu.lo(Cpu::AX) * kVectorSize] = static_cast<u8>(cpu.r[Cpu::DX]);
-      mem_[cpu.lo(Cpu::AX) * kVectorSize + 1] = static_cast<u8>(cpu.r[Cpu::DX] >> 8);
-      mem_[cpu.lo(Cpu::AX) * kVectorSize + 2] = static_cast<u8>(cpu.s[Cpu::DS]);
-      mem_[cpu.lo(Cpu::AX) * kVectorSize + 3] = static_cast<u8>(cpu.s[Cpu::DS] >> 8);
+      mem_[cpu.lo(Cpu::AX) * 4u] = static_cast<u8>(cpu.r[Cpu::DX]);
+      mem_[cpu.lo(Cpu::AX) * 4u + 1] = static_cast<u8>(cpu.r[Cpu::DX] >> 8);
+      mem_[cpu.lo(Cpu::AX) * 4u + 2] = static_cast<u8>(cpu.s[Cpu::DS]);
+      mem_[cpu.lo(Cpu::AX) * 4u + 3] = static_cast<u8>(cpu.s[Cpu::DS] >> 8);
       break;
     case dosFn::getVector:
-      cpu.r[Cpu::BX] = peek16(0, static_cast<u16>(cpu.lo(Cpu::AX) * kVectorSize));
-      cpu.s[Cpu::ES] = peek16(0, static_cast<u16>(cpu.lo(Cpu::AX) * kVectorSize + 2));
+      cpu.r[Cpu::BX] = peek16(0, static_cast<u16>(cpu.lo(Cpu::AX) * 4));
+      cpu.s[Cpu::ES] = peek16(0, static_cast<u16>(cpu.lo(Cpu::AX) * 4 + 2));
       break;
     case dosFn::version: cpu.r[Cpu::AX] = kDosVersion; break;
     case dosFn::create: case dosFn::open: {
@@ -276,7 +264,7 @@ void Machine::dos() {
       if (it == files_.end()) { cpu.r[Cpu::AX] = dosError::badHandle; setCarry(true); break; }
       File& f = it->second;
       const std::size_t n = std::min<std::size_t>(cpu.r[Cpu::CX], f.data.size() - f.at);
-      for (std::size_t i = 0; i < n; ++i) write(u32{cpu.s[Cpu::DS]} * kParagraph + static_cast<u16>(cpu.r[Cpu::DX] + i), f.data[f.at + i]);
+      for (std::size_t i = 0; i < n; ++i) write(u32{cpu.s[Cpu::DS]} * 16 + static_cast<u16>(cpu.r[Cpu::DX] + i), f.data[f.at + i]);
       f.at += n;
       cpu.r[Cpu::AX] = static_cast<u16>(n);
       setCarry(false);
@@ -422,17 +410,17 @@ void Machine::boot() {
   loops_ = 0;
   loopLimit_ = 1;
   cpu.pause = false;
-  for (std::uint64_t i = 0; i < kBootLimit && !cpu.pause && !exited_; ++i) cpu.step();
+  for (std::uint64_t i = 0; i < 400'000'000 && !cpu.pause && !exited_; ++i) cpu.step();
   if (!cpu.pause) throw CpuError("the program never reached its loop");
   ticks_ = 0;
 }
 
 void Machine::frame() {
   // Not in the middle of something the program does with interrupts off.
-  for (int i = 0; i < kInterruptsOffLimit && !cpu.flag(Cpu::IF) && !exited_; ++i) cpu.step();
+  for (int i = 0; i < 100000 && !cpu.flag(Cpu::IF) && !exited_; ++i) cpu.step();
   for (u8 code : keys_) {
     keyPort_ = code;
-    const u16 off = peek16(0, vec::keyboard * kVectorSize), seg = peek16(0, vec::keyboard * kVectorSize + 2);
+    const u16 off = peek16(0, vec::keyboard * 4), seg = peek16(0, vec::keyboard * 4 + 2);
     if (seg || off) cpu.callInterrupt(seg, off);
   }
   keys_.clear();
@@ -450,9 +438,9 @@ void Machine::frame() {
     loops_ = midTurn_ ? 0 : -1;
     loopLimit_ = loopsPerFrame;
     cpu.pause = false;
-    for (std::uint64_t i = 0; i < kFrameLimit && !cpu.pause && !exited_; ++i) cpu.step();
+    for (std::uint64_t i = 0; i < 2'000'000 && !cpu.pause && !exited_; ++i) cpu.step();
     midTurn_ = !cpu.pause;
-    loopLimit_ = kNoLoopLimit;  // the callbacks and keys of the next frame are not counted
+    loopLimit_ = 1 << 30;    // the callbacks and keys of the next frame are not counted
   } else if (!exited_) {
     cpu.run(loopBudget);
   }

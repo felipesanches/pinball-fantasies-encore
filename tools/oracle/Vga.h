@@ -34,14 +34,8 @@ constexpr int overflow = 0x07, maxScanLine = 0x09, startHigh = 0x0c, startLow = 
 
 class Vga {
  public:
-  static constexpr int kPlanes = 4;
-  static constexpr int kPlaneBytes = 0x10000;
   /// The BIOS's mode 13h: 320 by 200 in 256 colours.
   static constexpr u8 kMode13h = 0x13;
-  /// The colours: 256 of red, green and blue, each 0 to kDacMax.
-  static constexpr int kColourBytes = 3, kDacBytes = 768, kDacMax = 0x3f;
-  /// The dots of a row of the picture.
-  static constexpr int kWidth = 320;
   /// Bits of the CRT controller's overflow and maximum scan line registers: bits 8 and 9 of
   /// the line compare.
   static constexpr int kLineCompare8 = 0x10, kLineCompare9 = 0x40;
@@ -56,18 +50,18 @@ class Vga {
   /// Called once per frame: the retrace begins.
   void startFrame() { statusReads_ = 0; }
 
-  std::array<std::vector<u8>, kPlanes> planes;
-  std::array<u8, kDacBytes> dac{};  ///< 6-bit components
+  std::array<std::vector<u8>, 4> planes;
+  std::array<u8, 768> dac{};  ///< 6-bit components
   u8 seq[8]{}, gc[16]{}, crtc[32]{}, attr[32]{};
 
   u16 startAddress() const { return static_cast<u16>((crtc[crtcReg::startHigh] << 8) | crtc[crtcReg::startLow]); }
   int lineCompare() const { return crtc[crtcReg::lineCompare] | ((crtc[crtcReg::overflow] & kLineCompare8) << 4) | ((crtc[crtcReg::maxScanLine] & kLineCompare9) << 3); }
-  /// The picture as shown: `height` rows of kWidth colour indices, read as the unchained
+  /// The picture as shown: `height` rows of 320 colour indices, read as the unchained
   /// 256-colour mode lays them out, with the split screen the tables use for the display.
   std::vector<u8> picture(int height) const;
 
  private:
-  u8 latch_[kPlanes]{};
+  u8 latch_[4]{};
   u8 seqIndex_ = 0, gcIndex_ = 0, crtcIndex_ = 0, attrIndex_ = 0;
   bool attrFlip_ = false;
   u8 dacWrite_ = 0, dacRead_ = 0;

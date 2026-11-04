@@ -270,7 +270,6 @@ struct TargetShape {
   u16 at, down, up, width;
 };
 namespace targetShapes {
-constexpr u16 rows = 0x10;  ///< each of them sixteen rows
 constexpr TargetShape dropCenter0{0x2389, 0x62d0, 0x6370, 2};  ///< pfr: ShowHitCenter0
 constexpr TargetShape dropCenter1{0x26a9, 0x62f0, 0x6360, 1};  ///< pfr: ShowHitCenter1
 constexpr TargetShape dropLeft0{0x2994, 0x6300, 0x6350, 1};  ///< pfr: ShowHitLeft0
@@ -394,21 +393,8 @@ constexpr u16 matchPace = 0x0762;
 
 /// The table's place in the engine's maps (Flow's second argument).
 constexpr int kTableIndex = 2;
-/// The players a game can have.
-constexpr u16 kMaxPlayers = 8;
 /// What var::scoreDrawn's digits are set to, so that each is drawn again.
 constexpr u8 kScoreUndrawn = 0x12;
-/// In a 12-digit number, the place of its millions.
-constexpr u16 kScoreMillions = 5;
-/// In an award's record that has a tune, the place of its score's millions (the tune's word,
-/// then the 12 digits).
-constexpr u16 kAwardMillions = 7;
-/// Two characters in a word: a space, then the digit 1 (" 1").
-constexpr u16 kSpaceDigit1 = 0x3820;
-/// Added to glyph::digit0, a blank: a nought left out at the front of a number.
-constexpr u16 kBlankLessDigit0 = static_cast<u16>(glyph::blank - glyph::digit0);  // 0xfff3
-/// The character after the digit 9: a multiplier from there on is written with two.
-constexpr u8 kPastDigit9 = 0x41;
 /// A light's state set to 1, not ff, as the rules' own mark: a prize to collect
 /// (lights::collectPrize), and the ball more and the jackpot lit to be taken.
 constexpr u8 kMarked = 1;
@@ -422,15 +408,11 @@ constexpr u8 taken = 2;
 /// The four targets that drop, as target() numbers them.
 namespace drops {
 constexpr int center0 = 0, center1 = 1, left0 = 2, left1 = 3;
-constexpr int count = 4;
 }  // namespace drops
 
 /// The prize wheel: its eight places (var::wheelPos), and where each prize is on it.
 namespace wheel {
-constexpr u16 places = 8;
-constexpr u8 mask = 7;  ///< a place, kept from 0 to 7
 constexpr u8 tv = 0, trip = 1, car = 2, plane = 4, house = 5, boat = 6;
-constexpr u8 backHigh = 2;  ///< at the faster screen mode it starts two places back
 }  // namespace wheel
 
 /// Places in the song (var::musicNext): where the music goes on after a tune.
@@ -441,95 +423,6 @@ constexpr u8 afterMode = 0x03;  ///< after a mode's end: the main music past its
 constexpr u8 afterAttract = 0x09;  ///< after the tune while nobody plays
 constexpr u8 silence = 0x37;  ///< pfr's Silence (ds:08ad)
 }  // namespace songAt
-
-/// Where the view looks (var::lookAtSoft) while the ball is out of play, at the faster screen
-/// mode and at the other.
-namespace lookAt {
-constexpr u16 drainedHigh = 0x103, drainedLow = 0x171;  ///< as the ball drains
-constexpr u16 vaultHigh = 0xdc, vaultLow = 0x10e;  ///< at the prize wheel, while it turns
-}  // namespace lookAt
-
-/// Half periods of the lights' blinking, and the blinks' common period.
-namespace blinks {
-constexpr u8 period = 0x14;  ///< the common period (cs:1e15): twenty frames
-constexpr u8 half = 0x0a;  ///< half of it: the lights that blink in it, and how far out of step the others begin
-constexpr u8 flash = 2;  ///< both door targets hit; and a light about to go out (times::hurry)
-constexpr u8 hurryTopLoop = 3;  ///< the top loop's, about to go out (pfr: 3)
-constexpr u8 moneyMania = 3;
-constexpr u8 billion = 4;  ///< the billion collected
-constexpr u8 dollar = 6;  ///< one door target hit
-constexpr u8 skillShot = 0x0f;  ///< the skills light, as a ball begins
-}  // namespace blinks
-
-/// Frames: what the timers count to (pfr's tasks, src/table/tasks.rs), and the timeouts (pfr's
-/// fields).
-namespace times {
-constexpr u16 drainSfx = 5;  ///< pfr: DrainSfx, 5
-constexpr u16 resetDropCenter = 0x3c;  ///< pfr: ShowResetDropCenter, 60
-constexpr u16 resetDropLeft = 0x3c;  ///< pfr: ShowResetDropLeft, 60
-constexpr u16 unblinkDollar = 0x19;  ///< pfr: ShowUnblinkDollar, 25
-constexpr u16 unblinkDollarAll = 0x3c;  ///< pfr: ShowUnblinkDollarAll, 60
-constexpr u16 billionRelease = 0xfa;  ///< pfr: ShowBillionRelease, 250
-constexpr u16 vaultEject = 0x1e;  ///< pfr: ShowVaultEject, 30
-constexpr u16 spinWheelEnd = 0x64;  ///< pfr: ShowSpinWheelEnd, 100
-constexpr u16 cashpot = 0xa0;  ///< pfr: ShowCashpot, 160
-constexpr u16 cashpotEject = 0x28;  ///< pfr: ShowCashpotEject(40)
-constexpr u16 cashpotEjectInMode = 0x1e;  ///< pfr: ShowCashpotEject(30)
-constexpr u16 hurry = 0x78;  ///< a light lit for a time blinks fast for its last 120 frames
-constexpr u16 jackpot = 0x5dc;  ///< pfr: timeout_jackpot = 1500
-constexpr u16 superJackpot = 0x12c;  ///< pfr: timeout_super_jackpot = 300
-constexpr u16 cashpotX5 = 0x294;  ///< pfr: timeout_cashpot_x5 = 660
-constexpr u16 cashpotX5Taken = 0x0a;  ///< what is left of it once the cashpot is taken five times
-constexpr u16 topLoop = 0x258;  ///< pfr: timeout_top_loop = 600
-constexpr u16 prizeShot = 0xf0;  ///< pfr: timeout_tv, _car, _trip = 240: a shot lights the prize
-constexpr u16 multiBonus = 0xf0;  ///< pfr: timeout_mb = 240
-constexpr u16 prizeHint = 0x258;  ///< pfr: timeout_boat, _house, _plane = 600, after the hint
-constexpr u16 matchPace = 0x0e;  ///< each of the match's digits
-}  // namespace times
-
-/// The game-start task's state (any but 0 says it is not done; the original's numbers).
-namespace tasks {
-constexpr u16 gameStartingFirst = 0x2c;
-constexpr u16 gameStartingStill = 0x22;  ///< while players may still join
-}  // namespace tasks
-
-/// The script's steps: their sizes (Engine::nextStep), and where their words are.
-namespace steps {
-constexpr u16 bare = 2;  ///< a step that is only its routine
-constexpr u16 withWord = 4, withTwoWords = 6;
-constexpr u16 arg1 = 2, arg2 = 4;
-}  // namespace steps
-
-/// The ball's speeds when it is let go (pfr's teleports, signed, in the comments).
-namespace speeds {
-constexpr u16 vaultEject = 0xf254;  ///< up, out of the vault (pfr: (_, -3500))
-constexpr u16 spinWheelEnd = 0xf49c;  ///< up, out of the vault after the wheel (pfr: (_, -2916))
-constexpr u16 plungerLaneX = 0x0a;  ///< back into the plunger lane (pfr: (10, 0))
-constexpr u16 cashpotEjectX = 0x53, cashpotEjectY = 0x588;  ///< out of the cashpot (pfr: (83, 1416))
-}  // namespace speeds
-
-/// Volumes given to sfx() (pfr's default is 0x40, all of it).
-namespace volumes {
-constexpr u8 outlane = 0x20;  ///< pfr: RollTrigger at 0x20
-}  // namespace volumes
-
-/// Counts.
-namespace counts {
-constexpr u16 matchText = 0x10;  ///< the match texts' bytes
-constexpr u16 matchMoves = 0x0f;  ///< the digits the match moves through
-constexpr u16 maniaAtKept = 4;  ///< bytes of MONEY MANIA AT's number kept (a hundred takes one more place)
-constexpr int cashpotX5 = 5;  ///< the cashpot, taken five times
-constexpr u8 multiBonusSteps = 6;  ///< the six multipliers
-}  // namespace counts
-
-/// The trips up the skills ramp (var::skills).
-namespace skills {
-constexpr u16 every = 6;  ///< something at every sixth (pfr: num_cyclone / 6 * 6 + 6)
-constexpr u16 unwrittenTo = 12;  ///< MONEY MANIA AT's number is written past the twelfth
-constexpr u16 hundred = 0x64;  ///< from a hundred, it is written one place on
-constexpr u16 lastNarrow = 96;  ///< the last sixth under a hundred
-}  // namespace skills
-
 }  // namespace show
 
 class Gameshow : public Flow {
@@ -544,18 +437,18 @@ class Gameshow : public Flow {
   /// the others, or half a period out.
   u8 inStep() { return b(show::var::lightPhasePrize); }
   u8 outOfStep() {
-    const u8 start = static_cast<u8>(b(show::var::lightPhasePrize) + show::blinks::half);
-    return start >= show::blinks::period ? static_cast<u8>(start - show::blinks::period) : start;
+    const u8 start = static_cast<u8>(b(show::var::lightPhasePrize) + 0x0a);
+    return start >= 0x14 ? static_cast<u8>(start - 0x14) : start;
   }
   void wait1() {
     w(show::var::taskState) = 1;
     w(show::var::task) = show::code::waitTask;
   }
   void copy12(u16 to, u16 from) {
-    for (u16 i = 0; i < kScoreDigits; ++i) b(static_cast<u16>(to + i)) = b(static_cast<u16>(from + i));
+    for (u16 i = 0; i < 12; ++i) b(static_cast<u16>(to + i)) = b(static_cast<u16>(from + i));
   }
   void zero12(u16 at) {
-    for (u16 i = 0; i < kScoreDigits; ++i) b(static_cast<u16>(at + i)) = 0;
+    for (u16 i = 0; i < 12; ++i) b(static_cast<u16>(at + i)) = 0;
   }
   u8& lightState(u8 light) { return b(static_cast<u16>(show::var::lightStates + light)); }
   using Flow::placeBall;
@@ -570,8 +463,8 @@ class Gameshow : public Flow {
   void restorePlayer() override;          // cs:0be9
   void clearBall() override;              // cs:0008
   bool extraBallOwed() override { return lightState(show::lights::extraBall) == kSet; }
-  void matchPace() override { nativeCW(show::cvar::matchPace) = show::times::matchPace; }
-  u16 matchLength() override { return show::counts::matchMoves; }
+  void matchPace() override { nativeCW(show::cvar::matchPace) = 0x0e; }
+  u16 matchLength() override { return 0x0f; }
   u16 matchRepeated(u16 digit) override { return static_cast<u16>(9 - digit); }
   void matchWon() override { b(show::var::matchWon) = kSet; }
   void gameOverLights() override {}
@@ -628,7 +521,7 @@ class Gameshow : public Flow {
   void threeDigits(u16 value, u16 at);
   void maniaAt();
   bool bothShown_ = false;  ///< the pair of door targets is flashing for both having been hit
-  std::array<u8, show::counts::maniaAtKept> maniaAt_{};  ///< the skills ramp's message's number as the program begins it (ds:129f)
+  std::array<u8, 4> maniaAt_{};  ///< the skills ramp's message's number as the program begins it (ds:129f)
 };
 
 }  // namespace encore

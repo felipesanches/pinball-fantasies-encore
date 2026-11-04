@@ -37,26 +37,12 @@ constexpr u8 f1 = 0x3b;
 constexpr u8 down = 0x50, downUp = 0xd0;  ///< the plunger (after `extended`, the arrow's)
 }  // namespace scan
 
-/// The game --flip plays at random, the same in encore-oracle and encore-oracle-table: from
-/// frame `from` on, the flippers, enter now and then, the plunger pulled and let go, a nudge.
-namespace randomPlay {
-constexpr unsigned seedMix = 2654435761u;  ///< the seed is multiplied by this (Knuth's multiplicative hash)
-constexpr unsigned lcgMul = 1664525u, lcgAdd = 1013904223u;  ///< the generator (Numerical Recipes')
-constexpr int from = 400;
-constexpr int flipperOdds = 23;  ///< a flipper changes in one frame of so many
-constexpr int enterEvery = 900, enterHeld = 5;  ///< frames
-constexpr int plungerEvery = 300, plungerAt = 100;  ///< pulled at frame plungerAt of every plungerEvery,
-constexpr int plungerHeldRange = 60, plungerHeldMin = 20;  ///< and let go 20 to 79 frames later
-constexpr int nudgeOdds = 400;
-}  // namespace randomPlay
-
 class Machine : public Bus {
  public:
-  static constexpr int kConfigBytes = 6;
   /// The options as PINBALL.CFG holds them: balls (0 three, 1 five), angle, scrolling,
   /// music off, resolution (0 normal, 1 high), mono.
   struct Config {
-    u8 bytes[kConfigBytes] = {0, 0, 1, 0, 1, 0};
+    u8 bytes[6] = {0, 0, 1, 0, 1, 0};
   };
 
   Machine(const std::filesystem::path& gameDir, int table, const Config& config);
@@ -75,8 +61,8 @@ class Machine : public Bus {
   void key(u8 scancode) { keys_.push_back(scancode); }
   bool exited() const { return exited_; }
 
-  u8 peek8(u16 seg, u16 off) const { return mem_[((u32{seg} << 4) + off) & kAddressMask]; }
-  void poke8(u16 seg, u16 off, u8 v) { mem_[((u32{seg} << 4) + off) & kAddressMask] = v; }
+  u8 peek8(u16 seg, u16 off) const { return mem_[((u32{seg} << 4) + off) & 0xfffff]; }
+  void poke8(u16 seg, u16 off, u8 v) { mem_[((u32{seg} << 4) + off) & 0xfffff] = v; }
   u16 peek16(u16 seg, u16 off) const { return static_cast<u16>(peek8(seg, off) | (peek8(seg, static_cast<u16>(off + 1)) << 8)); }
   /// A segment value of the program's as its listing has it (relative to where it is loaded).
   u16 seg(u16 relative) const { return static_cast<u16>(base_ + relative); }
@@ -97,14 +83,8 @@ class Machine : public Bus {
   bool interrupt(u8 number) override;
 
  private:
-  /// An address's twenty bits: past the first megabyte it wraps round.
-  static constexpr int kAddressMask = 0xfffff;
   /// What the sound driver's next answer is when nothing has set one.
   static constexpr u8 kNoStatus = 0xff;
-  /// The handles DOS gives a program's files: after its own five (stdin to stdprn).
-  static constexpr u16 kFirstHandle = 5;
-  /// The program's loop counted with no end.
-  static constexpr int kNoLoopLimit = 1 << 30;
 
   struct Callback {
     u16 scanline = 0;
@@ -136,7 +116,7 @@ class Machine : public Bus {
     bool written = false;
   };
   std::map<u16, File> files_;
-  u16 nextHandle_ = kFirstHandle;
+  u16 nextHandle_ = 5;
 
   // the sound driver's state
   bool callbacksOn_ = true;
@@ -148,7 +128,7 @@ class Machine : public Bus {
   u32 ticks_ = 0;
   bool polling_ = false;
   u32 loopAt_ = 0;
-  int loops_ = 0, loopLimit_ = kNoLoopLimit;
+  int loops_ = 0, loopLimit_ = 1 << 30;
   bool midTurn_ = false;
 };
 

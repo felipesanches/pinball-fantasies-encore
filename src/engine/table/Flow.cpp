@@ -70,29 +70,29 @@ void Flow::bindFlow() {
   };
   auto holdBonus = [this] {  // the bonus as it was before it was counted, if it is to be kept
     if (B(at::holdBonus) != kSet) return;
-    for (u16 i = 0; i < kScoreDigits; ++i) B(at::bonus, i) = B(at::bonusKept, i);
+    for (u16 i = 0; i < 12; ++i) B(at::bonus, i) = B(at::bonusKept, i);
   };
 
   bind(at::serveBall, [this] { serve(); });
   bind(at::issueBallFinishTimer, [this] {
-    if (!countTo(A(at::issueBallFinishCounter), frames::issueBallFinish)) return;
+    if (!countTo(A(at::issueBallFinishCounter), 0x1e)) return;
     startBall();
     endTimer();
   });
   if (has(at::issueBallRaiseSfxTimer)) bind(at::issueBallRaiseSfxTimer, [this] {
-    if (!countTo(A(at::issueBallRaiseSfxCounter), frames::issueBallRaiseSfx)) return;
+    if (!countTo(A(at::issueBallRaiseSfxCounter), 5)) return;
     effect(at::soundRaiseTargets);
     endTimer();
   });
   bind(at::issueBallSfxTimer, [this] {
     // (the sound of the ball coming up: three of the tables wait 50 frames for it and one 45;
     // amended: all 45)
-    if (!countTo(A(at::issueBallSfxCounter), amended ? frames::issueBallSfx : kw(at::issueBallSfxTimer, 1))) return;
+    if (!countTo(A(at::issueBallSfxCounter), amended ? 0x2d : kw(at::issueBallSfxTimer, 1))) return;
     effect(at::soundIssueBall);
     endTimer();
   });
   bind(at::issueBallReleaseTimer, [this] {  // the ball appears at the top of the lane, rolling right
-    if (!countTo(A(at::issueBallReleaseCounter), frames::issueBallRelease)) return;
+    if (!countTo(A(at::issueBallReleaseCounter), 0x50)) return;
     placeBall(kw(at::laneTopXInsn, 4), kw(at::laneTopYInsn, 4));
     W(at::ballVx) = kw(at::laneTopVxInsn, 4);
     B(at::ballHidden) = 0;
@@ -103,23 +103,23 @@ void Flow::bindFlow() {
   bind(at::accBonus, [this] {
     CW(at::accBonusFrame) = 0;
     W(at::bonusAdding) = A(at::bonusUnit);
-    W(at::bonusDigit) = A(at::bonus + kScoreDigits - 1);
-    for (u16 i = 0; i < kScoreDigits; ++i) B(at::bonusKept, i) = B(at::bonus, i);
+    W(at::bonusDigit) = A(at::bonus + 12 - 1);
+    for (u16 i = 0; i < 12; ++i) B(at::bonusKept, i) = B(at::bonus, i);
     W(at::task) = F(at::accBonusTask);
     nextStep(2);
   });
   bind(at::accBonusTask, [this] {
     si = taskState::countingBonus;
-    if (++CW(at::accBonusFrame) != frames::accBonusStep) return;
+    if (++CW(at::accBonusFrame) != 4) return;
     CW(at::accBonusFrame) = 0;
     for (;;) {
       const u16 digit = W(at::bonusDigit);
       if (nativeB(digit) == 0) {  // this digit is done: the next one up
-        if (++W(at::bonusAdding) == A(at::bonusUnit + kScoreDigits)) {
+        if (++W(at::bonusAdding) == A(at::bonusUnit + 12)) {
           W(at::fillAt) = display::bonusClear;
-          W(at::fillWidth) = display::bonusClearWidth;
-          W(at::fillRows) = display::bonusClearRows;
-          fillDisplay(display::bonusClear, display::bonusClearWidth, display::bonusClearRows);
+          W(at::fillWidth) = 0x1c;
+          W(at::fillRows) = 0x0a;
+          fillDisplay(display::bonusClear, 0x1c, 0x0a);
           si = 0;
           return;
         }
@@ -128,9 +128,9 @@ void Flow::bindFlow() {
       }
       if (--nativeB(digit) == 0) {
         bool left = false;
-        for (u16 i = 0; i < kScoreDigits; ++i)
+        for (u16 i = 0; i < 12; ++i)
           if (B(at::bonus, i) != 0) left = true;
-        if (left) CW(at::accBonusFrame) = frames::accBonusPause;  // a pause before the next digit
+        if (left) CW(at::accBonusFrame) = 0xfff6;  // a pause before the next digit
       }
       addScore(A(at::score), W(at::bonusAdding));
       effect(at::soundTickBonus);
@@ -145,10 +145,10 @@ void Flow::bindFlow() {
   });
   bind(at::anotherBall, [=, this] {
     holdBonus();
-    if (++B(at::ballDigit) >= glyph::digit0 + kDecimal) {
-      B(at::ballDigit) = glyph::digit0;
-      if (B(at::ballTens) == glyph::digit0 + 1) ++B(at::ballTens);
-      else B(at::ballTens) = glyph::digit0 + 1;
+    if (++B(at::ballDigit) >= 0x41) {
+      B(at::ballDigit) = 0x37;
+      if (B(at::ballTens) == 0x38) ++B(at::ballTens);
+      else B(at::ballTens) = 0x38;
     }
     savePlayer(currentPlayer());
     const u16 step = bx;
@@ -182,9 +182,9 @@ void Flow::bindFlow() {
       return;
     }
     si = 1;
-    for (u16 left = bestScoreRec::count, entry = kw(at::bestScoresCompareInsn, 1); left > 0; --left, entry = static_cast<u16>(entry + bestScoreRec::size)) {
+    for (u16 left = 4, entry = kw(at::bestScoresCompareInsn, 1); left > 0; --left, entry = static_cast<u16>(entry + bestScoreRec::size)) {
       int order = 0;
-      for (u16 i = 0; i < kScoreDigits && order == 0; ++i) {
+      for (u16 i = 0; i < 12 && order == 0; ++i) {
         const u8 mine = nativeB(static_cast<u16>(score + i)), best = nativeB(static_cast<u16>(entry + i));
         order = mine < best ? -1 : mine > best ? 1 : 0;
       }
@@ -198,7 +198,7 @@ void Flow::bindFlow() {
         music(A(at::tuneGameOverHighScore));
       }
       W(at::taskState) = 1;
-      B(at::highScorePlayerDigit) = static_cast<u8>(CB(at::highScorePlayers) + glyph::digit0);
+      B(at::highScorePlayerDigit) = static_cast<u8>(CB(at::highScorePlayers) + 0x37);
       W(at::task) = F(at::highScoreInsert);
       plain(font::h13);
       drawText(A(at::textHighScore), display::line);
@@ -211,9 +211,9 @@ void Flow::bindFlow() {
     for (u16 i = 0; i < below; ++i) nativeB(static_cast<u16>(to - i)) = nativeB(static_cast<u16>(from - i));
     const u16 entry = static_cast<u16>(to - below - (bestScoreRec::size - 1));
     const u16 score = static_cast<u16>(A(at::playerRecords) + (CB(at::highScorePlayers) - 1) * playerSize());
-    for (u16 i = 0; i < kScoreDigits; ++i) nativeB(static_cast<u16>(entry + i)) = nativeB(static_cast<u16>(score + i));
-    CW(at::highScoreLetters) = bestScoreRec::letters;
-    CW(at::highScoreLetter) = static_cast<u16>(entry + kScoreDigits);
+    for (u16 i = 0; i < 12; ++i) nativeB(static_cast<u16>(entry + i)) = nativeB(static_cast<u16>(score + i));
+    CW(at::highScoreLetters) = 3;
+    CW(at::highScoreLetter) = static_cast<u16>(entry + 12);
     B(at::lastKey) = scancodes::none;
     W(at::task) = F(at::highScoreName);
     si = 1;
@@ -228,13 +228,13 @@ void Flow::bindFlow() {
         typed = true;
         nativeB(CW(at::highScoreLetter)) = key;
         CW(at::highScoreLetter) += 1;
-        B(at::highScoreInitials, static_cast<u16>(bestScoreRec::letters - CW(at::highScoreLetters))) = key;
+        B(at::highScoreInitials, static_cast<u16>(3 - CW(at::highScoreLetters))) = key;
         if (--CW(at::highScoreLetters) == 0) {
-          W(at::taskState) = frames::highScoreName;
+          W(at::taskState) = 0x3c;
           W(at::task) = F(at::highScoreNameDone);
           plain(font::h13);
           drawText(A(at::textHighScore), display::line);
-          for (u16 i = 0; i < bestScoreRec::letters; ++i) B(at::highScoreInitials, i) = glyph::space;
+          for (u16 i = 0; i < 3; ++i) B(at::highScoreInitials, i) = 0x20;
           si = W(at::taskState);
           return;
         }
@@ -248,11 +248,11 @@ void Flow::bindFlow() {
   });
   bind(at::highScoreNameDone, [=, this] {
     --si;
-    if (si == frames::highScoreNameClear) {
+    if (si == 0x1e) {
       plain(font::h13);
       drawText(A(at::textBlank), display::line);
     }
-    if (si <= frames::highScoreNameLast) {
+    if (si <= 2) {
       W(at::task) = F(at::recordHighScoresTask);
       si = 1;
     }
@@ -273,7 +273,7 @@ void Flow::bindFlow() {
   // --- each player's score in turn
   bind(at::eachScoreBegin, [=, this] {
     CW(at::eachScorePlayer) = static_cast<u16>(-playerSize());
-    B(at::playerDigit) = glyph::digit0;
+    B(at::playerDigit) = 0x37;
     playerShown();
     CB(at::eachScoreLeft) = static_cast<u8>(B(at::players) + 1);
     wait1();
@@ -321,7 +321,7 @@ void Flow::bindFlow() {
     B(at::musicNext) = amended ? kb(at::silencePlaceInsn, 1) : kb(at::musicAfterMatchInsn, 4);
     W(at::task) = F(at::matchDigit);
     for (u16 player = 0; player < B(at::players); ++player) {
-      const u16 digit = static_cast<u16>((glyph::space << 8) | static_cast<u8>(nativeB(static_cast<u16>(A(at::playerRecords) + kScoreDigits - 2 + player * playerSize())) + glyph::digit0));
+      const u16 digit = static_cast<u16>(0x2000 | static_cast<u8>(nativeB(static_cast<u16>(A(at::playerRecords) + 0x0a + player * playerSize())) + 0x37));
       W(at::matchPlayers, static_cast<u16>(player * 2)) = digit;
       W(at::matchWinners, static_cast<u16>(player * 2)) = digit;
     }
@@ -329,7 +329,7 @@ void Flow::bindFlow() {
     drawText(A(at::matchPlayers), display::top);
     // (amended: the digit the match sets out from is drawn by chance too, and the next is
     // never the same again: the one after it is shown instead, on every table)
-    if (amended) W(at::matchNumber) = chance(kDecimal, W(at::matchNumber));
+    if (amended) W(at::matchNumber) = chance(10, W(at::matchNumber));
     si = matchLength();
     W(at::taskState) = si;
     matchPace();
@@ -339,10 +339,10 @@ void Flow::bindFlow() {
     matchPace();
     plain(font::h5);
     drawText(A(at::matchBlank), static_cast<u16>(display::matchDigits + (W(at::matchNumber) << 3)));  // the last digit rubbed out
-    u16 digit = chance(kDecimal, W(at::loopCounter) % kDecimal);
-    if (W(at::matchNumber) == digit) digit = amended ? (digit == kDecimal - 1 ? 0 : static_cast<u16>(digit + 1)) : matchRepeated(digit);
+    u16 digit = chance(10, W(at::loopCounter) % 10);
+    if (W(at::matchNumber) == digit) digit = amended ? (digit == 9 ? 0 : static_cast<u16>(digit + 1)) : matchRepeated(digit);
     W(at::matchNumber) = digit;
-    B(at::matchDigitText) = static_cast<u8>(digit + glyph::digit0);
+    B(at::matchDigitText) = static_cast<u8>(digit + 0x37);
     plain(font::h5);
     W(at::drawSource) = A(at::matchDigitText);
     W(at::drawAt) = static_cast<u16>(display::matchDigits + (digit << 3));
@@ -351,13 +351,13 @@ void Flow::bindFlow() {
     // the last one stands: who has it?
     CB(at::matchedAny) = 0;
     for (u16 player = 0; player < B(at::players); ++player) {
-      if (B(at::matchPlayers, static_cast<u16>(player * 2)) == static_cast<u8>(digit + glyph::digit0)) CB(at::matchedAny) = kSet;
-      else W(at::matchWinners, static_cast<u16>(player * 2)) = glyph::twoBlanks;
+      if (B(at::matchPlayers, static_cast<u16>(player * 2)) == static_cast<u8>(digit + 0x37)) CB(at::matchedAny) = kSet;
+      else W(at::matchWinners, static_cast<u16>(player * 2)) = 0x2a2a;
     }
     si = 0;
     if (CB(at::matchedAny) != kSet) return;
-    W(at::flashPeriod) = frames::matchBlink;
-    W(at::flashCount) = frames::matchBlink;
+    W(at::flashPeriod) = 3;
+    W(at::flashCount) = 3;
     W(at::flashPhase) = kSet;
     B(at::flashing) = kSet;
     plain(font::h5);
@@ -371,10 +371,10 @@ void Flow::bindFlow() {
   bind(at::checkMatch, [this] {  // the next player who matched plays a ball more
     for (;;) {
       const u16 mark = static_cast<u16>(B(at::player) * 2 + A(at::matchPlayers - 2));
-      const u8 digit = static_cast<u8>(nativeB(mark) - glyph::digit0);
+      const u8 digit = static_cast<u8>(nativeB(mark) - 0x37);
       nativeW(mark) = matchSeen;
       if (W(at::matchNumber) == digit) {
-        B(at::playerDigit) = static_cast<u8>(B(at::player) + glyph::digit0);
+        B(at::playerDigit) = static_cast<u8>(B(at::player) + 0x37);
         matchWon();
         return goTo(A(at::scriptShootAgain));
       }
@@ -389,7 +389,7 @@ void Flow::bindFlow() {
     }
     if (B(at::player) == B(at::players)) return goTo(A(at::scriptPostMatch));
     ++B(at::player);
-    B(at::playerDigit) = static_cast<u8>(B(at::player) + glyph::digit0);
+    B(at::playerDigit) = static_cast<u8>(B(at::player) + 0x37);
     goTo(A(at::scriptCheckMatch));
   });
 
@@ -408,10 +408,10 @@ void Flow::bindFlow() {
         return goTo(A(at::scriptMatch));
       }
       B(at::player) = 1;
-      B(at::ballDigit) = static_cast<u8>(B(at::ball) + glyph::digit0);
+      B(at::ballDigit) = static_cast<u8>(B(at::ball) + 0x37);
       ballShown();
     }
-    B(at::playerDigit) = static_cast<u8>(B(at::player) + glyph::digit0);
+    B(at::playerDigit) = static_cast<u8>(B(at::player) + 0x37);
     playerShown();
     if (restoresAtTurn()) restorePlayer();
     const u16 step = bx;
@@ -432,10 +432,10 @@ void Flow::bindFlow() {
   bind(at::gameOverTimer, [this] {  // the game is over: the table goes back to waiting
     B(at::countPlayersAfresh) = kSet;
     toAttract();
-    W(at::lookAt) = high() ? screenScroll::lastHigh : screenScroll::lastLow;
-    W(at::attractScroll) = screenScroll::up;
+    W(at::lookAt) = high() ? 0x103 : 0x171;
+    W(at::attractScroll) = 0xffff;
     if (clearsScoreAtEnd())
-      for (u16 i = 0; i < kScoreDigits; ++i) B(at::score, i) = 0;
+      for (u16 i = 0; i < 12; ++i) B(at::score, i) = 0;
     lightsOut();
     B(at::playersMayJoin) = kSet;
     gameOverLights();
@@ -443,7 +443,7 @@ void Flow::bindFlow() {
   });
   bind(at::issueBallTimer, [this] {
     // (two of the tables wait a second here and two half a second; amended: all half a second)
-    if (countTo(A(at::issueBallCounter), amended ? frames::issueBall : kw(at::issueBallTimer, 1))) serve();
+    if (countTo(A(at::issueBallCounter), amended ? 0x1e : kw(at::issueBallTimer, 1))) serve();
   });
 }
 

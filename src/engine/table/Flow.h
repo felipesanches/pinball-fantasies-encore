@@ -23,7 +23,7 @@ class Flow : public Engine {
   /// Whether the player has another ball to come without it counting (Party Land: the light).
   virtual bool extraBallOwed() { return B(at::extraBallLight) == kSet; }
   /// The match's pace: how many frames each digit stands (Party Land: cs:0883, cs:08ab).
-  virtual void matchPace() { CW(at::matchFrames) = high() ? frames::matchDigitHigh : frames::matchDigitLow; }
+  virtual void matchPace() { CW(at::matchFrames) = high() ? 0x0b : 0x09; }
   /// How many digits the match runs through before it stops.
   /// (Party Land's is one more at the slower screen mode than at the faster, which makes the
   /// two last as long; amended: the faster one's count.)
@@ -38,7 +38,7 @@ class Flow : public Engine {
   }
   /// The match's digit came out the same as the last one: what is shown instead (Party Land,
   /// cs:0902: the next one up).
-  virtual u16 matchRepeated(u16 digit) { return digit == kDecimal - 1 ? 0 : static_cast<u16>(digit + 1); }
+  virtual u16 matchRepeated(u16 digit) { return digit == 9 ? 0 : static_cast<u16>(digit + 1); }
   /// A player matched (Party Land: cs:0a58): one more ball, and its tune is not played again.
   virtual void matchWon() {
     B(at::matchWon) = kSet;

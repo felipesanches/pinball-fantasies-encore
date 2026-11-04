@@ -8,8 +8,7 @@
 namespace encore {
 namespace {
 
-constexpr u16 kRow = display::row;  // bytes from one row of dots to the next
-
+constexpr u16 kRow = 0xa8;  // bytes from one row of dots to the next
 }  // namespace
 
 void Engine::compiledPicture(const u8* code, std::size_t size, u16 start, u16 base, int plane, u8 litDot, u8 unlitDot) {
@@ -53,12 +52,12 @@ void Engine::setFont(int which) {
 
 /// cs:6ccd: one letter at `at`, which is left where the original leaves DI.
 void Engine::drawChar(u8 c, u16& at) {
-  if (c == glyph::space) {
-    at = static_cast<u16>(at - W(at::fontNext) + display::letter);
+  if (c == 0x20) {
+    at = static_cast<u16>(at - W(at::fontNext) + 4);
     return;
   }
-  c = static_cast<u8>(c - glyph::digit0);
-  u16 glyph = c == static_cast<u8>(glyph::blank - glyph::digit0) ? A(at::blankGlyph) : static_cast<u16>(W(at::font) + c * B(at::fontHeight));
+  c = static_cast<u8>(c - 0x37);
+  u16 glyph = c == static_cast<u8>(0x2a - 0x37) ? A(at::blankGlyph) : static_cast<u16>(W(at::font) + c * B(at::fontHeight));
   const u16 rows = static_cast<u16>(W(at::fontHeight) - W(at::glyphRowsCut));
   glyph = static_cast<u16>(glyph + W(at::glyphFirstRow));
   // A row is a byte: its bits, from the top one down, are the dots from left to right, which
@@ -77,13 +76,13 @@ void Engine::drawText(u16 text, u16 at) {
   do {
     u16 place = at;
     drawChar(c, place);
-    at = static_cast<u16>(at + display::letter);
+    at = static_cast<u16>(at + 4);
     c = nativeB(++text);
   } while (c != 0);
 }
 
 void Engine::forgetNumber() {
-  for (u16 i = 0; i < kScoreDigits; ++i) B(at::numberDrawn, i) = display::notDrawn;
+  for (u16 i = 0; i < 12; ++i) B(at::numberDrawn, i) = display::notDrawn;
   B(at::numberStarted) = 0;
   W(at::numberGroups) = 0;
 }
@@ -94,10 +93,10 @@ void Engine::drawNumber(u16 digits, u16 at) {
   if (B(at::numberCentred) == kSet) {  // set to the left: move back two for each zero in front
     B(at::numberCentred) = 0;
     u16 scanned = 0;
-    while (scanned < kScoreDigits && nativeB(static_cast<u16>(digits + scanned++)) == 0) {}
+    while (scanned < 12 && nativeB(static_cast<u16>(digits + scanned++)) == 0) {}
     at = static_cast<u16>(at - scanned * 2);
   }
-  for (u16 i = 0; i < kScoreDigits; ++i) {
+  for (u16 i = 0; i < 12; ++i) {
     u8 d = nativeB(static_cast<u16>(digits + i));
     bool draw = true;
     if (d == 0 && B(at::numberStarted) != kSet) draw = false;
@@ -110,13 +109,13 @@ void Engine::drawNumber(u16 digits, u16 at) {
     B(at::numberShown, i) = draw ? d : display::unchanged;
   }
   B(at::numberStarted) = 0;
-  drawCommas(digits, static_cast<u16>(at - W(at::fontNext) + display::commaBack));
-  for (u16 i = 0; i < kScoreDigits; ++i) {
+  drawCommas(digits, static_cast<u16>(at - W(at::fontNext) + 0xf6d4));
+  for (u16 i = 0; i < 12; ++i) {
     const u8 d = B(at::numberShown, i);
     if (d == display::unchanged) {
-      at = static_cast<u16>(at + display::letter);
+      at = static_cast<u16>(at + 4);
     } else {
-      drawChar(static_cast<u8>(d + glyph::digit0), at);
+      drawChar(static_cast<u8>(d + 0x37), at);
       at = static_cast<u16>(at + W(at::fontNext));
     }
   }
@@ -124,18 +123,18 @@ void Engine::drawNumber(u16 digits, u16 at) {
 
 /// cs:6d6f: the marks between the thousands, as many as the number needs.
 void Engine::drawCommas(u16 digits, u16 base) {
-  for (u16 groups = display::commaGroups;; --groups) {
+  for (u16 groups = 3;; --groups) {
     if (groups == 0) return;
     const u16 pair = static_cast<u16>(nativeW(digits) + nativeB(static_cast<u16>(digits + 2)));
     const u16 sum = static_cast<u16>((nativeW(digits) & 0xff00) | (pair & 0xff));
-    digits = static_cast<u16>(digits + display::groupDigits);
+    digits = static_cast<u16>(digits + 3);
     if (sum == 0) continue;
-    const bool erase = sum >= display::commaTen;
+    const bool erase = sum >= 0x0a00;
     const bool same = groups == W(at::numberGroups);
     W(at::numberGroups) = groups;
     if (same) return;
     u16 at = static_cast<u16>(base + display::commaMark - display::score);
-    for (u16 n = groups; n > 0; --n, at = static_cast<u16>(at - display::commaGroup)) {
+    for (u16 n = groups; n > 0; --n, at = static_cast<u16>(at - 0x0c)) {
       const u8 v = (n == 1 && erase) ? unlit() : lit();
       dot(1, at) = v;
       dot(1, static_cast<u16>(at + kRow)) = v;
@@ -152,9 +151,9 @@ void Engine::drawScore(u16 digits, u16 at) {
   const u16 scoreDigits = digits, scoreAt = at;
   const u16 segment = static_cast<u16>(cs_[static_cast<u16>(F(at::bigScoreTask) - 2)] | (cs_[static_cast<u16>(F(at::bigScoreTask) - 1)] << 8));
   const u8* code = &farB(segment, 0);
-  u16 count = kScoreDigits;
+  u16 count = 0x0c;
   while (nativeB(digits) == 0) {  // not the zeros in front, but always the last digit
-    at = static_cast<u16>(at + display::letter);
+    at = static_cast<u16>(at + 4);
     ++digits;
     if (--count == 1) break;
   }
@@ -164,13 +163,13 @@ void Engine::drawScore(u16 digits, u16 at) {
   // where in that segment: its three notes, and for each plane the table of the digits' pictures
   // and what is added to an entry of it
   constexpr std::size_t countAt = 0x81, placeAt = 0x85, digitsAt = 0x89, litDotAt = 0x8c, unlitDotAt = 0x8d;
-  constexpr std::size_t picturesEven = 0xc8, baseEven = 0xd4, picturesOdd = 0x119, baseOdd = 0x125, codeSize = 0x1480;
+  constexpr std::size_t picturesEven = 0xc8, baseEven = 0xd4, picturesOdd = 0x119, baseOdd = 0x125;
   nativeW(its(countAt)) = count;
   nativeW(its(placeAt)) = at;
   nativeW(its(digitsAt)) = digits;
   for (int plane = 0; plane < 2; ++plane) {
     u16 place = at;
-    for (u16 i = 0; i < count; ++i, place = static_cast<u16>(place + display::letter)) {
+    for (u16 i = 0; i < count; ++i, place = static_cast<u16>(place + 4)) {
       const u8 d = nativeB(static_cast<u16>(digits + i));
       const u8 before = B(at::scoreDrawn, i);
       if (plane == 1) B(at::scoreDrawn, i) = d;
@@ -178,20 +177,20 @@ void Engine::drawScore(u16 digits, u16 at) {
       const u16 entry = static_cast<u16>(((d + '0') & 0xff) * 2);  // by the digit's ASCII code
       const u16 start = plane == 0 ? static_cast<u16>(nativeW(static_cast<u16>(its(picturesEven) + entry)) + its(baseEven))
                                    : static_cast<u16>(nativeW(static_cast<u16>(its(picturesOdd) + entry)) + its(baseOdd));
-      compiledPicture(code, codeSize, start, place, plane, code[litDotAt], code[unlitDotAt]);
+      compiledPicture(code, 0x1480u, start, place, plane, code[litDotAt], code[unlitDotAt]);
     }
   }
   // cs:0135 of that segment: the marks between the thousands
-  for (u16 groups = display::commaGroups;; --groups) {
+  for (u16 groups = 3;; --groups) {
     if (groups == 0) return;
-    const u16 sum = static_cast<u16>((nativeW(scoreDigits + (display::commaGroups - groups) * display::groupDigits) & 0xff00) |
-                                     ((nativeW(scoreDigits + (display::commaGroups - groups) * display::groupDigits) + nativeB(static_cast<u16>(scoreDigits + (display::commaGroups - groups) * display::groupDigits + 2))) & 0xff));
+    const u16 sum = static_cast<u16>((nativeW(scoreDigits + (3 - groups) * 3) & 0xff00) |
+                                     ((nativeW(scoreDigits + (3 - groups) * 3) + nativeB(static_cast<u16>(scoreDigits + (3 - groups) * 3 + 2))) & 0xff));
     if (sum == 0) continue;
     const bool same = groups == W(at::scoreDrawnGroups);
     W(at::scoreDrawnGroups) = groups;
     if (same) return;
     u16 mark = static_cast<u16>(scoreAt + display::commaMark - display::score);
-    for (u16 n = groups; n > 0; --n, mark = static_cast<u16>(mark - display::commaGroup)) {
+    for (u16 n = groups; n > 0; --n, mark = static_cast<u16>(mark - 0x0c)) {
       dot(1, mark) = lit();
       dot(1, static_cast<u16>(mark + kRow)) = lit();
       dot(0, static_cast<u16>(mark + 1)) = lit();
@@ -232,7 +231,7 @@ void Engine::startScript(u16 native) {
 }
 
 void Engine::runStep(u16 native) {
-  for (u16 i = 0; i < kScoreDigits; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;  // the score is drawn afresh
+  for (u16 i = 0; i < 12; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;  // the score is drawn afresh
   W(at::scoreDrawnGroups) = 0;
   bx = native;
   call(nativeW(native));
@@ -256,14 +255,14 @@ void Engine::bindDisplay() {
   bind(at::haltTask, [this] { si = 1; });  // for ever
   bind(at::bigScoreTask, [this] {  // the score, once
     drawScore(si, display::bigScore);
-    for (u16 i = 0; i < kScoreDigits; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;
+    for (u16 i = 0; i < 12; ++i) B(at::scoreDrawn, i) = display::scoreNotDrawn;
     W(at::scoreDrawnGroups) = 0;
     si = 0;
   });
   bind(at::defaultTask, [this] {  // nothing in particular to show (cs:535b)
     si = 0;
     if (CB(at::keysOn) == 0) return;
-    if (W(at::idleFrames) == frames::idleShowScores) {
+    if (W(at::idleFrames) == 0x2d0) {
       if (B(at::ballOnPlunger) != kSet) {
         W(at::idleShowing) = kSet;
         B(at::idlePlayerDigit) = B(at::playerDigit);
@@ -283,7 +282,7 @@ void Engine::bindDisplay() {
     }
     // cs:5406: has the score passed the best on the table?
     if (B(at::ballUntouched) != kSet && B(at::modeRunning) != kSet && B(at::gotTopScore) != kSet) {
-      for (u16 i = 0; i < kScoreDigits; ++i) {
+      for (u16 i = 0; i < 12; ++i) {
         const u8 best = nativeB(static_cast<u16>(kw(at::bestScoreTopInsn, 1) + i)), score = B(at::score, i);
         if (score < best) break;
         if (score > best) {
@@ -327,7 +326,7 @@ void Engine::bindDisplay() {
   // --- steps
   bind(at::checkTopScore, [this] {  // has the score passed the table's best? then say so first
     if (B(at::gotTopScore) != kSet) {
-      for (u16 i = 0; i < kScoreDigits; ++i) {
+      for (u16 i = 0; i < 12; ++i) {
         const u8 best = nativeB(static_cast<u16>(kw(at::bestScoreTopInsn, 1) + i)), score = B(at::score, i);
         if (score < best) break;
         if (score > best) {
@@ -450,7 +449,7 @@ void Engine::bindDisplay() {
   bind(at::delayIfMultiplayer, [=, this] {  // wait, but not long for one player
     // (amended: on Stones 'n Bones a lone player is given the time as well, to read what the
     // display says between balls)
-    wait(B(at::players) == 1 && !(amended && table() == tableId::stonesNBones) ? frames::delayOnePlayer : arg(2));
+    wait(B(at::players) == 1 && !(amended && table() == tableId::stonesNBones) ? 2 : arg(2));
     nextStep(4);
   });
   bind(at::halt, [=, this] {
@@ -474,7 +473,7 @@ void Engine::bindDisplay() {
   });
   bind(at::longMsgTask, [this] {
     for (int twice = 0; twice < 2; ++twice) {
-      if (nativeB(static_cast<u16>(si + display::longMsgLetters - 1)) == display::longMsgEnd) {  // the end of the text
+      if (nativeB(static_cast<u16>(si + 0x14)) == display::longMsgEnd) {  // the end of the text
         W(at::longMsgText) += 1;
         si = 0;
         return;
@@ -484,7 +483,7 @@ void Engine::bindDisplay() {
                               Pass{at::longMsgMaskA, at::longMsgAtA, at::longFontEvenIndex, at::longFontEven}}) {
         const int plane = CB(pass.mask) == planeMask::first ? 0 : 1;
         u16 place = CW(pass.at);
-        for (u16 i = 0; i < display::longMsgLetters; ++i, place = static_cast<u16>(place + display::letter)) {
+        for (u16 i = 0; i < 0x15; ++i, place = static_cast<u16>(place + 4)) {
           const u8 c = nativeB(static_cast<u16>(si + i));
           compiledPicture(cs_.data(), cs_.size(), static_cast<u16>(W(pass.table, static_cast<u16>(c * 2)) + A(pass.base)), place, plane,
                           kb(at::longFontColoursInsn, 1), kb(at::longFontColoursInsn, 2));
@@ -495,7 +494,7 @@ void Engine::bindDisplay() {
       if (CB(at::longMsgMaskB) == planeMask::first) CW(at::longMsgAtA) -= 1;
       else CW(at::longMsgAtB) -= 1;
       if (--CB(at::longMsgEighths) == 0) {  // eight half-dots: on to the next letter
-        CB(at::longMsgEighths) = display::longMsgSteps;
+        CB(at::longMsgEighths) = 8;
         ++si;
         CW(at::longMsgAtA) = kRow;
         CW(at::longMsgAtB) = kRow;
@@ -535,7 +534,7 @@ void Engine::bindDisplay() {
       }
       farW(bank, entryAt) = farW(bank, static_cast<u16>(si - animRec::back));
     }
-    farW(bank, entryAt) += animRec::frameSize;
+    farW(bank, entryAt) += 4;
     farW(bank, framesLeft) = farW(bank, static_cast<u16>(entry + si + animRec::frameTime));
     u16 frame = farW(bank, static_cast<u16>(entry + si));
     for (int plane = 0; plane < 2; ++plane) {
@@ -559,8 +558,8 @@ void Engine::bindDisplay() {
       W(at::glyphRowsCut) = static_cast<u16>(-row);
       W(at::glyphFirstRow) = static_cast<u16>(-row);
       at = kRow;
-    } else if (row > display::rows - font::h13Rows) {
-      W(at::glyphRowsCut) = static_cast<u16>(row - (display::rows - font::h13Rows));
+    } else if (row > 3) {
+      W(at::glyphRowsCut) = static_cast<u16>(row - 3);
       W(at::glyphFirstRow) = 0;
       at = static_cast<u16>((row + 1) * kRow);
     } else {
@@ -568,7 +567,7 @@ void Engine::bindDisplay() {
       W(at::glyphFirstRow) = 0;
       at = static_cast<u16>(row * kRow + kRow);
     }
-    if (W(at::glyphRowsCut) < font::h13Rows) drawText(W(at::msgScrollText), at);
+    if (W(at::glyphRowsCut) < 0x0d) drawText(W(at::msgScrollText), at);
     if (W(at::msgScrollRow) == W(at::msgScrollTarget)) {
       si = 0;
       W(at::glyphRowsCut) = 0;
@@ -585,8 +584,8 @@ void Engine::bindDisplay() {
     forgetNumber();
     W(at::modeScoreShown) = arg(6);
     W(at::modeFrames) = 1;
-    B(at::countdownTens) = static_cast<u8>(glyph::digit0 + arg(2));
-    B(at::countdownUnits) = static_cast<u8>(glyph::digit0 + 1 + arg(4));  // one more: it is counted down before it is shown
+    B(at::countdownTens) = static_cast<u8>(0x37 + arg(2));
+    B(at::countdownUnits) = static_cast<u8>(0x37 + 1 + arg(4));  // one more: it is counted down before it is shown
     nextStep(8);
   };
   bind(at::modeContinue, [=, this] {  // cs:4757: on from where it was, and no longer held
@@ -612,16 +611,16 @@ void Engine::bindDisplay() {
     si = 1;
     if (B(at::countdownHeld) != kSet && --W(at::modeFrames) == 0) {
       W(at::modeFrames) = W(at::modeSecondFrames);
-      if (B(at::countdownUnits) == glyph::digit0 && B(at::countdownTens) == glyph::blank) {  // nought: it is over
+      if (B(at::countdownUnits) == 0x37 && B(at::countdownTens) == 0x2a) {  // nought: it is over
         W(at::taskState) = 0;
         si = 0;
         return;
       }
-      if (--B(at::countdownUnits) == glyph::digit0 - 1) {
-        B(at::countdownUnits) += kDecimal;
+      if (--B(at::countdownUnits) == 0x36) {
+        B(at::countdownUnits) += 10;
         --B(at::countdownTens);
       }
-      if (B(at::countdownTens) == glyph::digit0) B(at::countdownTens) = glyph::blank;  // no nought in front
+      if (B(at::countdownTens) == 0x37) B(at::countdownTens) = 0x2a;  // no nought in front
       const u16 keptSi = si;
       call(F(at::tableModeSecond));
       si = keptSi;
@@ -642,23 +641,23 @@ void Engine::bindDisplay() {
     W(at::task) = F(at::msgScrollUpTask);
     W(at::msgScrollText) = arg(2);
     W(at::msgScrollTarget) = arg(4);
-    W(at::msgScrollRow) = display::slideBelow;
+    W(at::msgScrollRow) = 0x10;
     nextStep(6);
   });
   bind(at::dmMsgScrollDown, [=, this] {
     W(at::task) = F(at::msgScrollDownTask);
     W(at::msgScrollText) = arg(2);
     W(at::msgScrollTarget) = arg(4);
-    W(at::msgScrollRow) = display::slideAbove;
+    W(at::msgScrollRow) = 0xfff3;
     nextStep(6);
   });
   bind(at::msgScrollUpTask, [=, this] {
     --W(at::msgScrollRow);
     if (W(at::msgScrollRow).s() <= 2) {
-      W(at::fillAt) = static_cast<u16>((W(at::msgScrollRow) + font::h13Rows) * kRow + kRow);
-      W(at::fillWidth) = display::width;
+      W(at::fillAt) = static_cast<u16>((W(at::msgScrollRow) + 0x0d) * kRow + kRow);
+      W(at::fillWidth) = 0x50;
       W(at::fillRows) = 1;
-      fillDisplay(W(at::fillAt), display::width, 1);
+      fillDisplay(W(at::fillAt), 0x50, 1);
     }
     setFont(font::h13);
     slide();
@@ -667,9 +666,9 @@ void Engine::bindDisplay() {
     ++W(at::msgScrollRow);
     if (W(at::msgScrollRow).s() >= 1) {
       W(at::fillAt) = static_cast<u16>((W(at::msgScrollRow) - 1) * kRow + kRow);
-      W(at::fillWidth) = display::width;
+      W(at::fillWidth) = 0x50;
       W(at::fillRows) = 1;
-      fillDisplay(W(at::fillAt), display::width, 1);
+      fillDisplay(W(at::fillAt), 0x50, 1);
     }
     setFont(font::h13);
     slide();
@@ -685,9 +684,9 @@ void Engine::bindDisplay() {
   bind(at::dmClearTask, [this] {
     W(at::wipeAt) += kRow;
     W(at::fillAt) = W(at::wipeAt);
-    W(at::fillWidth) = display::width;
-    W(at::fillRows) = display::rows;
-    fillDisplay(W(at::fillAt), display::width, display::rows);
+    W(at::fillWidth) = 0x50;
+    W(at::fillRows) = 0x10;
+    fillDisplay(W(at::fillAt), 0x50, 0x10);
     si = 0;
   });
   bind(at::dmWipeDown, [this] {  // from the top down
@@ -703,9 +702,9 @@ void Engine::bindDisplay() {
       return;
     }
     W(at::fillAt) = W(at::wipeAt);
-    W(at::fillWidth) = display::width;
+    W(at::fillWidth) = 0x50;
     W(at::fillRows) = 1;
-    fillDisplay(W(at::fillAt), display::width, 1);
+    fillDisplay(W(at::fillAt), 0x50, 1);
     si = 1;
   });
   bind(at::dmWipeRight, [this] {  // from the left
@@ -722,8 +721,8 @@ void Engine::bindDisplay() {
     }
     W(at::fillAt) = W(at::wipeAt);
     W(at::fillWidth) = 1;
-    W(at::fillRows) = display::rows;
-    fillDisplay(W(at::fillAt), 1, display::rows);
+    W(at::fillRows) = 0x10;
+    fillDisplay(W(at::fillAt), 1, 0x10);
     si = 1;
   });
   bind(at::dmWipeDownStriped, [this] {  // as a blind
@@ -740,9 +739,9 @@ void Engine::bindDisplay() {
     }
     for (u16 band : {u16{0}, u16{0x2a0}, u16{0x540}, u16{0x7e0}}) {
       W(at::fillAt) = static_cast<u16>(W(at::wipeAt) + band);
-      W(at::fillWidth) = display::width;
+      W(at::fillWidth) = 0x50;
       W(at::fillRows) = 1;
-      fillDisplay(W(at::fillAt), display::width, 1);
+      fillDisplay(W(at::fillAt), 0x50, 1);
     }
     si = 1;
   });

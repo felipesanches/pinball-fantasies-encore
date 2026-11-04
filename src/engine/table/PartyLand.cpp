@@ -29,7 +29,7 @@ PartyLand::PartyLand(ByteView prg) : Flow(prg, kTableIndex) {
   bind(routines::tableStart, [this] {  // at start-up: the top of the left ramp's mask is kept, for putting back
     u16 to = gates::skyride.raised;
     for (u16 row = 0; row < gates::skyride.rows; ++row)
-      for (u16 b = 0; b < gates::skyride.width; ++b) B(to++) = farB(S(at::wallsRamps), static_cast<u16>(gates::skyride.at + row * counts::maskRowBytes + b));
+      for (u16 b = 0; b < gates::skyride.width; ++b) B(to++) = farB(S(at::wallsRamps), static_cast<u16>(gates::skyride.at + row * 0x28 + b));
     lightsOut();
   });
   bind(routines::tableAttractMusic, [this] {  // the music while nobody plays
@@ -52,12 +52,12 @@ PartyLand::PartyLand(ByteView prg) : Flow(prg, kTableIndex) {
   });
   bind(routines::tableTiltWarning, [this] { music(tunes::warnTilt); });  // the warning before it
   bind(timers::partyOn, [this] {
-    if (!countTo(counters::partyOn, times::partyOn)) return;
+    if (!countTo(counters::partyOn, 0x1e)) return;
     B(var::specialPlungerEvent) = kSet;
     serve();
   });
   bind(timers::drainSfx, [this] {
-    if (!countTo(counters::drainSfx, times::drainSfx)) return;
+    if (!countTo(counters::drainSfx, 5)) return;
     effect(sounds::ballDrained);
     endTimer();
   });
@@ -99,28 +99,28 @@ void PartyLand::newGameTable() {
   B(var::crazyRow) = 0;
   lightsOut();
   stopBlinks();
-  for (u16 i = 0; i < kScoreDigits; ++i) B(var::jackpot, i) = B(var::jackpotStart, i);
+  for (u16 i = 0; i < 12; ++i) B(var::jackpot, i) = B(var::jackpotStart, i);
   clearScores();
   clearBall();
-  for (u16 player = 0; player < kMaxPlayers; ++player) savePlayer(static_cast<u16>(player * rec::size));
+  for (u16 player = 0; player < 8; ++player) savePlayer(static_cast<u16>(player * rec::size));
   B(var::extraBalls) = 0;
   B(var::matchWon) = 0;
   B(var::partyOn) = 0;
-  for (u16 i = 0; i < counts::matchText; ++i) B(text::matchPlayers, i) = glyph::space;
-  for (u16 i = 0; i < counts::matchText; ++i) B(text::matchWinners, i) = glyph::space;
+  for (u16 i = 0; i < 0x10; ++i) B(text::matchPlayers, i) = 0x20;
+  for (u16 i = 0; i < 0x10; ++i) B(text::matchWinners, i) = 0x20;
 }
 
 void PartyLand::clearScores() {
   for (u16 at : {var::score, var::bonus, var::cyclonesDigits, var::cycloneBonus, var::tunnelSkillShot, var::cycloneSkillShot})
-    for (u16 i = 0; i < kScoreDigits; ++i) B(at, i) = 0;
+    for (u16 i = 0; i < 12; ++i) B(at, i) = 0;
   W(var::cyclones) = 0;
-  for (u16 i = 0; i < counts::matchText; ++i) B(text::matchPlayers, i) = glyph::space;
+  for (u16 i = 0; i < 0x10; ++i) B(text::matchPlayers, i) = 0x20;
 }
 
 void PartyLand::clearBall() {
-  B(text::multiplier) = glyph::digit0 + 1;
-  for (u16 i = 0; i < kScoreDigits; ++i) B(var::modeHitScore, i) = 0;
-  for (u16 i = 0; i < kScoreDigits; ++i) B(var::modeRampScore, i) = 0;
+  B(text::multiplier) = 0x37 + 1;
+  for (u16 i = 0; i < 12; ++i) B(var::modeHitScore, i) = 0;
+  for (u16 i = 0; i < 12; ++i) B(var::modeRampScore, i) = 0;
   B(var::layer) = layers::playfield;
   for (u16 a : {var::lightPhaseSnack, var::lightPhaseOrbit, var::lightPhasePuke, var::lightPhaseDemon, var::snack, var::snackLit,
                 u16{var::snackLit + 1}, u16{var::snackLit + 2}, var::arcadeOpen, var::rightOrbitMultiBonus})
@@ -149,8 +149,8 @@ void PartyLand::clearBall() {
   setLight(lights::duckDrop0);
   setLight(lights::duckDrop1);
   setLight(lights::duckDrop2);
-  blink(lights::tunnel1M, 0, blinks::tunnel);
-  blink(lights::orbit250k, 0, blinks::orbit);
+  blink(lights::tunnel1M, 0, 8);
+  blink(lights::orbit250k, 0, 9);
   flushColours();
   // the three drop targets stand
   patchMask(gates::duck0.segment, gates::duck0.at, gates::duck0.raised, gates::duck0.width, gates::duck0.rows);
@@ -169,7 +169,7 @@ void PartyLand::savePlayer(u16 player) {
   for (const Kept k : {Kept{var::players + rec::score, var::score}, {var::players + rec::bonus, var::bonus},
                        {var::players + rec::tunnelSkillShot, var::tunnelSkillShot}, {var::players + rec::cycloneSkillShot, var::cycloneSkillShot},
                        {var::players + rec::cyclonesDigits, var::cyclonesDigits}, {var::players + rec::cycloneBonus, var::cycloneBonus}})
-    for (u16 b = 0; b < kScoreDigits; ++b) nativeB(static_cast<u16>(player + k.at + b)) = B(k.from, b);
+    for (u16 b = 0; b < 12; ++b) nativeB(static_cast<u16>(player + k.at + b)) = B(k.from, b);
 }
 
 void PartyLand::restorePlayer() {
@@ -186,7 +186,7 @@ void PartyLand::restorePlayer() {
   for (const Kept k : {Kept{var::players + rec::score, var::score}, {var::players + rec::bonus, var::bonus},
                        {var::players + rec::tunnelSkillShot, var::tunnelSkillShot}, {var::players + rec::cycloneSkillShot, var::cycloneSkillShot},
                        {var::players + rec::cyclonesDigits, var::cyclonesDigits}, {var::players + rec::cycloneBonus, var::cycloneBonus}})
-    for (u16 b = 0; b < kScoreDigits; ++b) B(k.to, b) = nativeB(static_cast<u16>(player + k.at + b));
+    for (u16 b = 0; b < 12; ++b) B(k.to, b) = nativeB(static_cast<u16>(player + k.at + b));
 }
 
 void PartyLand::everyFrame() {
@@ -195,26 +195,26 @@ void PartyLand::everyFrame() {
   for (u16 a : {var::timeoutSkillShot, var::timeoutPartyT, var::timeoutPartyPr, var::timeoutSpringLoop})
     if (W(a) != 0) --W(a);
   struct Wheel { u16 at; u8 size; };
-  for (const Wheel w : {Wheel{var::lightPhaseSnack, blinks::snackPeriod}, {var::lightPhaseOrbit, blinks::orbitPeriod}, {var::lightPhasePuke, blinks::pukePeriod}, {var::lightPhaseDemon, blinks::demonPeriod}})
+  for (const Wheel w : {Wheel{var::lightPhaseSnack, 0x10}, {var::lightPhaseOrbit, 0x18}, {var::lightPhasePuke, 0x04}, {var::lightPhaseDemon, 0x1c}})
     if (++B(w.at) == w.size) B(w.at) = 0;
   if (W(var::timeoutTunnel) == 0) return;
   --W(var::timeoutTunnel);
-  if (W(var::timeoutTunnel) == times::tunnelHalf) {
+  if (W(var::timeoutTunnel) == 0x2d0) {
     stopBlink(lights::tunnel5M);
     lightOff(lights::tunnel5M);
     lightState(lights::tunnel3M) = 0;
-    blink(lights::tunnel3M, 0, blinks::tunnel);
+    blink(lights::tunnel3M, 0, 8);
   } else if (W(var::timeoutTunnel) == 0) {
     stopBlink(lights::tunnel3M);
     lightOff(lights::tunnel3M);
     lightState(lights::tunnel1M) = 0;
-    blink(lights::tunnel1M, 0, blinks::tunnel);
+    blink(lights::tunnel1M, 0, 8);
   }
 }
 
 void PartyLand::drained() {
   B(var::ballHidden) = kSet;
-  W(var::lookAtSoft) = high() ? lookAt::drainedHigh : lookAt::drainedLow;
+  W(var::lookAtSoft) = high() ? 0x103 : 0x171;
   placeBall(spots::dropZone);
   B(var::flippersLive) = 0;
   B(var::modeRunning) = 0;

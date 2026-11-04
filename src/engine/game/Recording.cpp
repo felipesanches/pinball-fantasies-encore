@@ -9,13 +9,7 @@ namespace encore {
 
 namespace {
 
-constexpr std::size_t kMagicSize = 4;
-constexpr char kMagic[kMagicSize] = {'P', 'F', 'R', 'P'};
-/// A number of seven bits at a time: the top bit of each byte says another follows. Five
-/// bytes at most hold a 32-bit one.
-constexpr int kMore = 0x80, kSevenBits = 0x7f;
-constexpr int kVarBits = 35;
-constexpr int kLargestDigit = 9;
+constexpr char kMagic[4u] = {'P', 'F', 'R', 'P'};
 
 struct Writer {
   Bytes out;
@@ -25,8 +19,8 @@ struct Writer {
   void u64_(u64 v) { for (int i = 0; i < 8; ++i) out.push_back(static_cast<u8>(v >> (8 * i))); }
   /// Seven bits at a time, low first: frames between events are mostly small.
   void var(u32 v) {
-    while (v >= kMore) {
-      out.push_back(static_cast<u8>(v | kMore));
+    while (v >= 0x80) {
+      out.push_back(static_cast<u8>(v | 0x80));
       v >>= 7;
     }
     out.push_back(static_cast<u8>(v));
@@ -51,10 +45,10 @@ struct Reader {
   }
   u32 var() {
     u32 v = 0;
-    for (int shift = 0; shift < kVarBits; shift += 7) {
+    for (int shift = 0; shift < 35; shift += 7) {
       const u8 b = u8_();
-      v |= u32{static_cast<u8>(b & kSevenBits)} << shift;
-      if (!(b & kMore)) return v;
+      v |= u32{static_cast<u8>(b & 0x7f)} << shift;
+      if (!(b & 0x80)) return v;
     }
     ok = false;
     return 0;
@@ -63,7 +57,7 @@ struct Reader {
     Bcd b;
     for (u8& d : b.digits) {
       d = u8_();
-      if (d > kLargestDigit) ok = false;
+      if (d > 9) ok = false;
     }
     return b;
   }
@@ -73,7 +67,7 @@ struct Reader {
 
 Bytes Recording::save() const {
   Writer w;
-  w.out.insert(w.out.end(), kMagic, kMagic + kMagicSize);
+  w.out.insert(w.out.end(), kMagic, kMagic + 4u);
   w.u16_(kFormat);
   w.u8_(static_cast<u8>(table));
   w.u64_(seed);
@@ -117,8 +111,8 @@ Bytes Recording::save() const {
 
 std::optional<Recording> Recording::load(ByteView data) {
   Reader r{data};
-  if (!r.need(kMagicSize) || std::memcmp(data.data(), kMagic, kMagicSize) != 0) return std::nullopt;
-  r.at = kMagicSize;
+  if (!r.need(4) || std::memcmp(data.data(), kMagic, 4) != 0) return std::nullopt;
+  r.at = 4u;
   if (r.le(2) != kFormat) return std::nullopt;
   Recording p;
   p.table = r.u8_();
@@ -134,7 +128,7 @@ std::optional<Recording> Recording::load(ByteView data) {
   p.carry.balls = r.u8_();
   p.carry.scrollPos = static_cast<u16>(r.le(2));
   p.carry.scrollAt = static_cast<u16>(r.le(2));
-  if (p.table > kTables - 1 || static_cast<u8>(p.options.angle) > static_cast<u8>(Angle::Higher) ||
+  if (p.table > 3 || static_cast<u8>(p.options.angle) > static_cast<u8>(Angle::Higher) ||
       static_cast<u8>(p.options.scrollSpeed) > static_cast<u8>(ScrollSpeed::Soft))
     return std::nullopt;
   for (HighScore& h : p.highScores) {
@@ -181,7 +175,7 @@ std::string Recording::fileName(const std::string& when, const std::string& tag)
     }
   }
   if (initials.empty()) initials = "---";
-  std::string name = std::string("FANTASY-") + kTableCodes[table & (kTables - 1)] + "-" + initials + "-";
+  std::string name = std::string("FANTASY-") + kTableCodes[table & 3] + "-" + initials + "-";
   if (!tag.empty()) name += tag + "-";
   return name + score + "-" + when + ".RPL";
 }
@@ -216,7 +210,7 @@ Verdict verify(ByteView prg, ByteView module, const Recording& rec, const Verify
   };
   if (rec.frames > limits.maxFrames) return refuse("longer than allowed");
   if (rec.events.size() > limits.maxEvents) return refuse("too many events");
-  if (rec.options.balls < 1 || rec.options.balls > VerifyLimits::kMostBalls || rec.carry.balls > VerifyLimits::kMostBalls)
+  if (rec.options.balls < 1 || rec.options.balls > 9 || rec.carry.balls > 9)
     return refuse("odd number of balls");
   if (rec.cheated()) return refuse("played with cheats");
   for (std::size_t i = 0; i < rec.events.size(); ++i) {

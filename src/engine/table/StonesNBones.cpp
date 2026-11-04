@@ -14,12 +14,12 @@ StonesNBones::StonesNBones(ByteView prg) : Flow(prg, kTableIndex) {
     stopBlinks();
     copy12(var::jackpot, var::jackpotStart);
     clearBall();
-    for (u16 player = 0; player < kMaxPlayers; ++player) savePlayer(static_cast<u16>(player * rec::size));
+    for (u16 player = 0; player < 8; ++player) savePlayer(static_cast<u16>(player * rec::size));
     b(var::extraBalls) = 0;
     b(var::matchWon) = 0;
     b(var::setAtNewGame) = kSet;
-    for (u16 i = 0; i < counts::matchText; ++i) b(static_cast<u16>(text::matchPlayers + i)) = glyph::space;
-    for (u16 i = 0; i < counts::matchText; ++i) b(static_cast<u16>(text::matchWinners + i)) = glyph::space;
+    for (u16 i = 0; i < 0x10; ++i) b(static_cast<u16>(text::matchPlayers + i)) = 0x20;
+    for (u16 i = 0; i < 0x10; ++i) b(static_cast<u16>(text::matchWinners + i)) = 0x20;
   });
   bindNative(routines::tableAttractMusic, [this] {  // the music while nobody plays
     music(tunes::attract);
@@ -33,7 +33,7 @@ StonesNBones::StonesNBones(ByteView prg) : Flow(prg, kTableIndex) {
   });
   bindNative(routines::tableDrained, [this] {  // the ball is lost
     b(var::betweenBalls) = kSet;
-    w(var::lookAtSoft) = high() ? lookAt::drainedHigh : lookAt::drainedLow;
+    w(var::lookAtSoft) = high() ? 0x103 : 0x171;
     placeBall(spots::drained);
     b(var::ballHidden) = kSet;
     b(var::flippersLive) = 0;
@@ -44,7 +44,7 @@ StonesNBones::StonesNBones(ByteView prg) : Flow(prg, kTableIndex) {
     award(awards::drained);
   });
   bindNative(timers::drainSfx.routine, [this] {
-    if (!countTo(timers::drainSfx.counter, times::drainSfx)) return;
+    if (!countTo(timers::drainSfx.counter, 5)) return;
     sfx(sounds::ballDrained);
     endTimer();
   });
@@ -88,7 +88,7 @@ StonesNBones::StonesNBones(ByteView prg) : Flow(prg, kTableIndex) {
     }
   });
   bindNative(routines::tableModeSecond, [this] {  // each second of a count-down: at nought the mode ends
-    if (b(var::countdownTens) != glyph::blank || b(var::countdownUnits) != glyph::digit0) return;
+    if (b(var::countdownTens) != 0x2a || b(var::countdownUnits) != 0x37) return;
     for (u16 mode : {var::modeRamp, var::modeHit})
       if (b(mode) == kSet) {
         b(var::musicRepeats) = 1;
@@ -130,7 +130,7 @@ void StonesNBones::addBonus(u16 amount) {
 }
 
 void StonesNBones::row(u16 flags, u8 firstLight) {
-  for (u16 i = 0; i < counts::rowLights; ++i) {
+  for (u16 i = 0; i < 3; ++i) {
     const u8 light = static_cast<u8>(firstLight + i);
     stopBlink(light);
     if (b(static_cast<u16>(flags + i)) == kSet) lightOn(light);
@@ -141,13 +141,13 @@ void StonesNBones::row(u16 flags, u8 firstLight) {
 void StonesNBones::shape(u16 segment, u16 record, bool second) {
   const u16 width = w(static_cast<u16>(record + gateRec::width));
   copyShape(static_cast<u16>(segment + kLoadSegment), w(static_cast<u16>(record + gateRec::at)),
-            static_cast<u16>(w(static_cast<u16>(record + (second ? gateRec::dropped : gateRec::raised))) + width), width, w(static_cast<u16>(record + gateRec::rows)), static_cast<u16>(width * kShapeRowsPerMaskRow));
+            static_cast<u16>(w(static_cast<u16>(record + (second ? gateRec::dropped : gateRec::raised))) + width), width, w(static_cast<u16>(record + gateRec::rows)), static_cast<u16>(width * 3));
 }
 
 void StonesNBones::lightTower() {
   if (b(var::towerOpen) == kSet) return;
   stopBlink(lights::tower);
-  blink(lights::tower, 0, blinks::tower);
+  blink(lights::tower, 0, 0x14);
   b(var::towerOpen) = kSet;
 }
 
@@ -164,15 +164,15 @@ void StonesNBones::modeCountHit() {
 }
 
 void StonesNBones::clearBall() {
-  b(text::multiplier) = glyph::digit0 + 1;
-  b(text::ballA) = glyph::digit0 + 1;
-  b(text::playerA) = glyph::digit0 + 1;
+  b(text::multiplier) = 0x38;
+  b(text::ballA) = 0x38;
+  b(text::playerA) = 0x38;
   zero12(var::score);
   zero12(var::bonus);
   zero12(var::screamsDigits);
   copy12(var::modeHitScore, points::k0);
   copy12(var::modeRampScore, points::k0);
-  for (u16 i = 0; i < counts::targetsBlinking; ++i) b(static_cast<u16>(var::boneBlinking + i)) = 0;  // and stoneBlinking
+  for (u16 i = 0; i < 11; ++i) b(static_cast<u16>(var::boneBlinking + i)) = 0;  // and stoneBlinking
   zero12(var::skillShot);
   copy12(var::millionPlusValue, points::k0);
   b(var::layer) = layers::playfield;
@@ -190,12 +190,12 @@ void StonesNBones::clearBall() {
   copy12(var::towerBonus, var::towerBonusStart);
   copy12(var::vault, var::vaultStart);
   copy12(var::well, var::wellStart);
-  w(var::screamsTarget) = counts::screamsStep;
+  w(var::screamsTarget) = 0x0a;
   w(var::screams) = 0;
   // the skill shot: one of the three KEY lights, by chance
-  const u8 first = static_cast<u8>(chance(counts::keyLanes, static_cast<u8>(w(var::loopCounter)) % counts::keyLanes) + lights::key);
+  const u8 first = static_cast<u8>(chance(3, static_cast<u8>(w(var::loopCounter)) % 3) + lights::key);
   b(var::keySkillShot) = first;
-  blink(first, 0, blinks::hurry);
+  blink(first, 0, 1);
   for (u16 a : {var::kickback, var::wellMultiBonus, var::screamX2, var::millionPlus, var::unusedA, var::unusedB, var::lightPhaseRight,
                 var::towerMillion, var::tower5M, var::lightPhaseTower, var::towerExtraBall, var::towerJackpot, var::towerSuperJackpot,
                 var::towerHoldBonus, var::towerDoubleBonus, var::holdBonus})
@@ -258,13 +258,13 @@ void StonesNBones::restorePlayer() {
   for (const KeptLight& k : kKeptLights) {
     if (b(static_cast<u16>(player + k.inRecord)) == kSet) setLight(k.light);
     else clearLight(k.light);
-    if (++n == counts::stoneTargets) flushColours();  // (the colours waiting to be set go out part way through)
+    if (++n == 5) flushColours();  // (the colours waiting to be set go out part way through)
   }
   flushColours();
   b(var::kickback) = b(static_cast<u16>(player + kept(rec::kickback)));
   if (b(var::kickback) == kSet) {
     stopBlink(lights::kickback);
-    blink(lights::kickback, 0, blinks::lit);
+    blink(lights::kickback, 0, 0x12);
     drop(gates::kickback);
   }
   w(var::screamsTarget) = w(static_cast<u16>(player + kept(rec::screamsTarget)));
@@ -274,16 +274,16 @@ void StonesNBones::restorePlayer() {
   for (u8 n2 = b(var::ghost); n2 > 0; --n2) setLight(b(ghostRecord(n2 - 1, ghosts::light)));  // the ghosts collected
   b(var::ghostActive) = b(static_cast<u16>(player + kept(rec::ghostActive)));
   if (b(var::ghostActive) == kSet) {
-    blink(b(ghostRecord(b(var::ghost), ghosts::light)), 0, blinks::ghost);
+    blink(b(ghostRecord(b(var::ghost), ghosts::light)), 0, 0x20);
     stopBlink(lights::vaultGhost);
-    blink(lights::vaultGhost, 0, blinks::lit);
+    blink(lights::vaultGhost, 0, 0x12);
   }
 }
 
 void StonesNBones::sameBallAgain() {
   --b(var::extraBalls);
   w(var::idleFrames) = 0;
-  for (u16 i = 0; i < kScoreDigits; ++i) b(static_cast<u16>(var::scoreDrawn + i)) = kScoreUndrawn;
+  for (u16 i = 0; i < 12; ++i) b(static_cast<u16>(var::scoreDrawn + i)) = kScoreUndrawn;
   w(var::scoreDrawnGroups) = 0;
   bx = scripts::shootAgain;
   call(nativeW(bx));
@@ -304,15 +304,15 @@ void StonesNBones::bindMatch() {
     w(var::task) = code::matchTask;
     for (u16 player = 0; player < b(var::players); ++player) {
       // the tens of each player's score (the units are always nought)
-      const u16 digit = static_cast<u16>(kSpaceAfter | static_cast<u8>(b(static_cast<u16>(kept(rec::score) + kScoreTens + player * rec::size)) + glyph::digit0));
+      const u16 digit = static_cast<u16>(0x2000 | static_cast<u8>(b(static_cast<u16>(kept(rec::score) + 0x0a + player * rec::size)) + 0x37));
       w(static_cast<u16>(text::matchPlayers + player * 2)) = digit;
       w(static_cast<u16>(text::matchWinners + player * 2)) = digit;
     }
     plain();
     drawText(text::matchPlayers, dmAt::matchPlayers);
-    w(var::matchNumber) = chance(counts::matchDigits, static_cast<u16>(w(var::loopCounter) % counts::matchDigits));
+    w(var::matchNumber) = chance(10, static_cast<u16>(w(var::loopCounter) % 10));
     nativeCW(cvar::matchWaits) = high() ? var::matchWaitsHigh : var::matchWaitsLow;
-    si = counts::matchSteps;
+    si = 0x24;
     nativeCW(cvar::matchFrames) = nativeW(nativeCW(cvar::matchWaits));
     w(var::taskState) = si;
   });
@@ -327,7 +327,7 @@ void StonesNBones::bindMatch() {
       if (--w(var::matchNumber) == 0xffff) w(var::matchNumber) = 9;
     }
     const u16 digit = w(var::matchNumber);
-    b(text::matchDigit) = static_cast<u8>(digit + glyph::digit0);
+    b(text::matchDigit) = static_cast<u8>(digit + 0x37);
     plain();
     w(var::drawSource) = text::matchDigit;
     w(var::drawAt) = static_cast<u16>(dmAt::matchDigits + (digit << 3));
@@ -337,12 +337,12 @@ void StonesNBones::bindMatch() {
     // the last one stands: who has it?
     nativeCB(cvar::matchHit) = 0;
     for (u16 player = 0; player < b(var::players); ++player) {
-      if (b(static_cast<u16>(text::matchPlayers + player * 2)) == static_cast<u8>(digit + glyph::digit0)) nativeCB(cvar::matchHit) = kSet;
-      else w(static_cast<u16>(text::matchWinners + player * 2)) = kTwoBlanks;
+      if (b(static_cast<u16>(text::matchPlayers + player * 2)) == static_cast<u8>(digit + 0x37)) nativeCB(cvar::matchHit) = kSet;
+      else w(static_cast<u16>(text::matchWinners + player * 2)) = 0x2a2a;
     }
     if (nativeCB(cvar::matchHit) != kSet) return;
-    w(var::flashPeriod) = times::matchFlashPeriod;
-    w(var::flashCount) = counts::matchFlashes;
+    w(var::flashPeriod) = 3;
+    w(var::flashCount) = 3;
     w(var::flashPhase) = kSet;
     b(var::flashing) = kSet;
     plain();
@@ -364,7 +364,7 @@ void StonesNBones::boneScored() {
 
 void StonesNBones::stoneScored() {
   modeCountHit();
-  sfx(sounds::stone, volumes::stone);
+  sfx(sounds::stone, 0x28);
   scored(points::k17520);
   addBonus(points::k750);
 }
@@ -373,7 +373,7 @@ void StonesNBones::stoneScored() {
 void StonesNBones::stonesBonesAll() {
   incJackpot();
   b(var::stonesBonesBlinking) = kSet;
-  for (u16 i = 0; i < counts::targetsBlinking; ++i) b(static_cast<u16>(var::boneBlinking + i)) = 0;
+  for (u16 i = 0; i < 11; ++i) b(static_cast<u16>(var::boneBlinking + i)) = 0;
   stonesAndBones(&StonesNBones::stop);
   if (b(var::ghostActive) != kSet) award(w(ghostRecord(b(var::ghost), ghosts::lit)));
   else award(awards::stonesBonesAllRedundant);
@@ -384,8 +384,8 @@ void StonesNBones::stonesBonesAll() {
 void StonesNBones::lightGhost() {
   if (b(var::ghostActive) == kSet) return;
   b(var::ghostActive) = kSet;
-  blink(b(ghostRecord(b(var::ghost), ghosts::light)), 0, blinks::ghost);
-  blink(lights::vaultGhost, 0, blinks::lit);
+  blink(b(ghostRecord(b(var::ghost), ghosts::light)), 0, 0x20);
+  blink(lights::vaultGhost, 0, 0x12);
 }
 
 /// cs:1795: the ramp to the tower shuts behind the ball, and MILLION PLUS, if lit, is collected.
@@ -410,7 +410,7 @@ void StonesNBones::keyAll() {
   all({lights::key, lights::key + 1, lights::key + 2}, &StonesNBones::flash);
   auto prize = [this](u16 flag, u8 light) {
     if (b(flag) == kSet) return;
-    blink(light, b(var::lightPhaseTower), blinks::lit);
+    blink(light, b(var::lightPhaseTower), 0x12);
     b(flag) = kSet;
   };
   const u16 times = w(var::keyTowerCycle);
@@ -424,7 +424,7 @@ void StonesNBones::keyAll() {
     award(awards::towerOpen);
     b(var::towerOpen) = kSet;
     stopBlink(lights::tower);
-    blink(lights::tower, 0, blinks::tower);
+    blink(lights::tower, 0, 0x14);
   }
   drop(gates::towerEntry);
 }
@@ -444,7 +444,7 @@ void StonesNBones::towerEject() {
   sfx(sounds::eject);
   b(var::ballHidden) = 0;
   place(spots::tower, layers::ramps);
-  w(var::ballVy) = speeds::towerEjectY;
+  w(var::ballVy) = 0xf2fb;
   w(var::ballVx) = 0;
   b(var::inTower) = 0;
 }
@@ -468,13 +468,13 @@ void StonesNBones::tower() {
   b(var::towerOpen) = 0;
   out(lights::tower);
   b(var::awardsShown) = 0;
-  if (b(var::towerHunt) == kSet && b(var::towerHuntStep) >= 1 && b(var::towerHuntStep) <= counts::towerHuntSteps) {
+  if (b(var::towerHunt) == kSet && b(var::towerHuntStep) >= 1 && b(var::towerHuntStep) <= 3) {
     const u8 step = b(var::towerHuntStep);
     const bool script = award(step == 1 ? awards::towerHunt1 : step == 2 ? awards::towerHunt2 : awards::towerHunt3);
     if (b(var::musicNext) != songAt::towerHuntLast) ++b(var::musicNext);
     shown(script);
     b(var::awardQuiet) = kSet;
-    b(var::towerHuntStep) = step == counts::towerHuntSteps ? 0 : static_cast<u8>(step + 1);
+    b(var::towerHuntStep) = step == 3 ? 0 : static_cast<u8>(step + 1);
     drop(gates::towerEntry);
     lightTower();
   }
@@ -490,12 +490,12 @@ void StonesNBones::tower() {
     shown(awardAlways(awards::towerJackpot));
     addScore(var::score, var::jackpot);
     copy12(var::jackpot, var::jackpotStart);
-    blink(lights::towerSuperJackpot, b(var::lightPhaseTower), blinks::lit);
+    blink(lights::towerSuperJackpot, b(var::lightPhaseTower), 0x12);
     b(var::towerSuperJackpot) = kSet;
     if (b(var::towerOpen) != kSet) {
       b(var::towerOpen) = kSet;
       stopBlink(lights::tower);
-      blink(lights::tower, 0, blinks::tower);
+      blink(lights::tower, 0, 0x14);
     }
     drop(gates::towerEntry);
     addTimer(timers::resetSuperJackpot.routine);
@@ -540,7 +540,7 @@ void StonesNBones::tower() {
     if (b(var::towerHunt) == kSet) {
       drop(gates::towerEntry);
       stopBlink(lights::tower);
-      blink(lights::tower, 0, blinks::tower);
+      blink(lights::tower, 0, 0x14);
       b(var::towerOpen) = kSet;
     }
   }
@@ -569,7 +569,7 @@ void StonesNBones::well() {
     b(var::awardQuiet) = kSet;
     shown(script);
     placeBall(spots::plungerLane);
-    w(var::ballVx) = speeds::lockServeX;
+    w(var::ballVx) = 0x0a;
     b(var::ballHidden) = 0;
     b(var::awardQuiet) = kSet;
     b(var::specialPlungerEvent) = kSet;
@@ -592,7 +592,7 @@ void StonesNBones::well() {
   }
   if (b(var::awardsShown) == 0) addTimer(timers::wellEject.routine);
   b(var::awardQuiet) = 0;
-  b(text::multiplier) = static_cast<u8>(b(var::bonusMultiplier) + glyph::digit0);
+  b(text::multiplier) = static_cast<u8>(b(var::bonusMultiplier) + 0x37);
 }
 
 /// cs:2506: the ball goes into the vault.
@@ -618,7 +618,7 @@ void StonesNBones::vault() {
     shown(script);
     b(var::ballHidden) = 0;
     placeBall(spots::plungerLane);
-    w(var::ballVx) = speeds::lockServeX;
+    w(var::ballVx) = 0x0a;
     b(var::awardQuiet) = kSet;
     b(var::specialPlungerEvent) = kSet;
     b(var::musicNext) = songAt::plunger;
@@ -643,7 +643,7 @@ void StonesNBones::vault() {
       shown(award(its));
     }
     call(w(ghostRecord(ghost, ghosts::routine)));
-    if (++b(var::ghost) >= counts::ghosts) {  // all eight: they blink, and begin again
+    if (++b(var::ghost) >= 8) {  // all eight: they blink, and begin again
       b(var::ghost) = 0;
       flushColours();
       b(var::ghostsBlinking) = kSet;
@@ -671,7 +671,7 @@ void StonesNBones::ripAll() {
   addTimer(timers::unblinkRipAll.routine);
   if (b(var::kickback) != kSet) {
     b(var::kickback) = kSet;
-    blink(lights::kickback, 0, blinks::lit);
+    blink(lights::kickback, 0, 0x12);
     drop(gates::kickback);
   }
   award(awards::kickback);
@@ -679,32 +679,32 @@ void StonesNBones::ripAll() {
 
 void StonesNBones::digits(u16 value, u16 at) {
   for (int i = 2; i >= 0; --i) {
-    b(static_cast<u16>(at + i)) = static_cast<u8>(value % 10 + glyph::digit0);
+    b(static_cast<u16>(at + i)) = static_cast<u8>(value % 10 + 0x37);
     value /= 10;
   }
   // no noughts in front (and, as the original, none after either if they are all noughts)
-  for (u16 n = 0; n < 0xffff && b(at) == glyph::digit0; ++n, ++at) b(at) = glyph::blank;
+  for (u16 n = 0; n < 0xffff && b(at) == 0x37; ++n, ++at) b(at) = 0x2a;
 }
 
 void StonesNBones::screamsLightExtraBall() {
   if (b(var::towerExtraBall) == kSet) return;
   b(var::towerExtraBall) = kSet;
-  blink(lights::towerExtraBall, b(var::lightPhaseTower), blinks::lit);
+  blink(lights::towerExtraBall, b(var::lightPhaseTower), 0x12);
   drop(gates::towerEntry);
   b(var::towerOpen) = kSet;
   stopBlink(lights::tower);
-  blink(lights::tower, 0, blinks::tower);
+  blink(lights::tower, 0, 0x14);
   award(awards::screamsExtraBall);
 }
 
 void StonesNBones::screamsLight5M() {
   if (b(var::tower5M) == kSet) return;
   b(var::tower5M) = kSet;
-  blink(lights::tower5M, b(var::lightPhaseTower), blinks::lit);
+  blink(lights::tower5M, b(var::lightPhaseTower), 0x12);
   drop(gates::towerEntry);
   b(var::towerOpen) = kSet;
   stopBlink(lights::tower);
-  blink(lights::tower, 0, blinks::tower);
+  blink(lights::tower, 0, 0x14);
   award(awards::towerOpen);
 }
 
@@ -740,21 +740,21 @@ void StonesNBones::rampScreams() {
     }
   } while (w(var::screams) == 1);
   if (w(var::screamsTarget) != w(var::screams)) {
-    const bool many = w(var::screams) > counts::screamsStep;
+    const bool many = w(var::screams) > 0x0a;
     digits(w(var::screamsTarget), many ? text::screamsTo5M : text::screamsToExtraBall);
     digits(w(var::screams), text::screams);
     award(many ? awards::screamsTo5M : awards::screamsToExtraBall);
     b(var::awardQuiet) = 0;
     return;
   }
-  if (w(var::screams) == counts::screamsStep) {
+  if (w(var::screams) == 0x0a) {
     screamsLightExtraBall();
   } else {
     screamsLight5M();
     digits(w(var::screams), text::screams);
     award(awards::screamsTo5M);
   }
-  w(var::screamsTarget) += counts::screamsStep;
+  w(var::screamsTarget) += 0x0a;
   b(var::awardQuiet) = 0;
 }
 
@@ -775,12 +775,12 @@ void StonesNBones::everyFrame() {
     }
     --w(var::timeoutLock);
   }
-  if (++b(var::lightPhaseRight) == blinks::phasesRight) b(var::lightPhaseRight) = 0;
-  if (++b(var::lightPhaseTower) == blinks::phasesTower) b(var::lightPhaseTower) = 0;
+  if (++b(var::lightPhaseRight) == 0x20) b(var::lightPhaseRight) = 0;
+  if (++b(var::lightPhaseTower) == 0x24) b(var::lightPhaseTower) = 0;
   auto hurry = [this](u16 flag, u8 light) {
     if (b(flag) == 0) return;
     stopBlink(light);
-    blink(light, 0, blinks::hurry);
+    blink(light, 0, 1);
   };
   auto over = [this](u16 flag, u8 light) {
     if (b(flag) == 0) return;
@@ -792,14 +792,14 @@ void StonesNBones::everyFrame() {
       over(var::millionPlus, lights::millionPlus);
       over(var::screamX2, lights::screamX2);
     }
-    if (w(var::timeoutLeftRamp) == times::hurry) {
+    if (w(var::timeoutLeftRamp) == 0x5a) {
       hurry(var::millionPlus, lights::millionPlus);
       hurry(var::screamX2, lights::screamX2);
     }
   }
   if (w(var::timeoutMultiBonus) != 0) {
     if (--w(var::timeoutMultiBonus) == 0) over(var::wellMultiBonus, lights::wellMultiBonus);
-    if (w(var::timeoutMultiBonus) == times::hurry) hurry(var::wellMultiBonus, lights::wellMultiBonus);
+    if (w(var::timeoutMultiBonus) == 0x5a) hurry(var::wellMultiBonus, lights::wellMultiBonus);
   }
   if (w(var::timeoutLoopCombo) != 0 && --w(var::timeoutLoopCombo) == 0) b(var::loopCombo) = 0;
   if (w(var::timeoutTowerHunt) != 0 && --w(var::timeoutTowerHunt) == 0) {
@@ -840,14 +840,14 @@ void StonesNBones::bindRules() {
                        u8{lights::stone + 2}, u8{lights::stone + 3}, u8{lights::stone + 4}})
         if (!isLit(light)) {
           addTimer(t.timer);
-          blink(t.light, 0, blinks::flash);
+          blink(t.light, 0, 2);
           return;
         }
       stonesBonesAll();
     });
     bindNative(t.timer, [this, t] {  // unblinks the target's light
       if (b(var::stonesBonesBlinking) != kSet) {
-        if (!countTo(t.counter, times::unblinkTarget)) return;
+        if (!countTo(t.counter, 0x0a)) return;
         stopBlink(t.light);
         setLight(t.light);
       } else {
@@ -857,12 +857,12 @@ void StonesNBones::bindRules() {
       endTimer();
     });
   }
-  after(timers::stonesBonesBlink, times::stonesBonesBlink, [this] {
+  after(timers::stonesBonesBlink, 2, [this] {
     stonesAndBones(&StonesNBones::flash);
     addTimer(timers::unblinkStonesBones.routine);
     endTimer();
   });
-  after(timers::unblinkStonesBones, times::unblinkStonesBones, [this] {
+  after(timers::unblinkStonesBones, 0x46, [this] {
     stonesAndBones(&StonesNBones::stop);
     stonesAndBones(&StonesNBones::clear);
     b(var::stonesBonesBlinking) = 0;
@@ -922,12 +922,12 @@ void StonesNBones::bindRules() {
       b(var::keySkillShot) = 0;
       if (isLit(lights::key) && isLit(lights::key + 1) && isLit(lights::key + 2)) return keyAll();
       addTimer(l.timer);
-      blink(l.light, 0, blinks::flash);
+      blink(l.light, 0, 2);
       b(var::flipperLockKey) = kSet;
     });
     bindNative(l.timer, [this, l] {  // unblinks the lane's light
       if (b(var::keyBlinking) != kSet) {
-        if (!countTo(l.counter, times::unblinkKey)) return;
+        if (!countTo(l.counter, 0x0a)) return;
         stopBlink(l.light);
         setLight(l.light);
         b(var::flipperLockKey) = 0;
@@ -935,7 +935,7 @@ void StonesNBones::bindRules() {
       endTimer();
     });
   }
-  after(timers::unblinkKeyAll, times::unblinkKeyAll, [this] {
+  after(timers::unblinkKeyAll, 0x46, [this] {
     all({lights::key, lights::key + 1, lights::key + 2}, &StonesNBones::stop);
     all({lights::key, lights::key + 1, lights::key + 2}, &StonesNBones::clear);
     b(var::keyBlinking) = 0;
@@ -944,7 +944,7 @@ void StonesNBones::bindRules() {
   });
 
   bindNative(routines::tower, [this] { tower(); });
-  after(timers::resetSuperJackpot, times::resetSuperJackpot, [this] {
+  after(timers::resetSuperJackpot, 0x30c, [this] {
     if (b(var::towerSuperJackpot) != 0) {
       out(lights::towerSuperJackpot);
       b(var::towerSuperJackpot) = 0;
@@ -958,7 +958,7 @@ void StonesNBones::bindRules() {
     b(var::ballHidden) = kSet;
     addTimer(timers::towerEject.routine);
   });
-  after(timers::towerEject, times::towerEject, [this] {
+  after(timers::towerEject, 0x0a, [this] {
     b(var::countdownHeld) = 0;
     if (b(var::towerResumeMode) == kSet) {  // a mode was running: its count-down goes on
       u16 script = scripts::modeRampContinue;
@@ -978,12 +978,12 @@ void StonesNBones::bindRules() {
     endTimer();
   });
   bindNative(routines::well, [this] { well(); });
-  after(timers::wellEject, times::wellEject, [this] {
+  after(timers::wellEject, 0x0a, [this] {
     sfx(sounds::eject);
     b(var::ballHidden) = 0;
     placeBall(spots::well);
-    w(var::ballVy) = speeds::wellEjectY;
-    w(var::ballVx) = speeds::wellEjectX;
+    w(var::ballVy) = 0x682;
+    w(var::ballVx) = 0xfd66;
     b(var::inWell) = 0;
     endTimer();
   });
@@ -1007,7 +1007,7 @@ void StonesNBones::bindRules() {
     scored(points::k500030);
   });
   bindNative(routines::vault, [this] { vault(); });
-  after(timers::unblinkGhosts, times::unblinkGhosts, [this] {
+  after(timers::unblinkGhosts, 0xf0, [this] {
     all({lights::ghosts, lights::ghosts + 1, lights::ghosts + 2, lights::ghosts + 3, lights::ghosts + 4, lights::ghosts + 5, lights::ghosts + 6,
          lights::ghosts + 7},
         &StonesNBones::stop);
@@ -1024,7 +1024,7 @@ void StonesNBones::bindRules() {
   auto lightTowerJackpot = [this] {
     if (b(var::towerJackpot) != kSet) {
       b(var::towerJackpot) = kSet;
-      blink(lights::towerJackpot, b(var::lightPhaseTower), blinks::lit);
+      blink(lights::towerJackpot, b(var::lightPhaseTower), 0x12);
       drop(gates::towerEntry);
     }
     lightTower();
@@ -1037,47 +1037,47 @@ void StonesNBones::bindRules() {
   bindNative(routines::ghostMillions, [] {});  // 5, 10 and 15 million
   bindNative(routines::ghostDemon, [this] {  // the demon: both locks ready
     b(var::lockReady) = kSet;
-    w(var::timeoutLock) = times::lock;
+    w(var::timeoutLock) = 0x834;
     b(var::lockVaultReady) = kSet;
     b(var::lockWellReady) = kSet;
     b(var::ballLocked) = 0;
     stopBlink(lights::vaultLock);
     stopBlink(lights::wellLock);
-    blink(lights::vaultLock, 0, blinks::lit);
-    blink(lights::wellLock, 0, blinks::lit);
+    blink(lights::vaultLock, 0, 0x12);
+    blink(lights::wellLock, 0, 0x12);
     b(var::screamDemon) = kSet;
-    blink(lights::screamDemon, 0, blinks::lit);
+    blink(lights::screamDemon, 0, 0x12);
   });
   bindNative(routines::ghostExtraBall, [this] {  // the extra ball, in the tower
     if (b(var::towerExtraBall) == kSet) return;
     b(var::towerExtraBall) = kSet;
-    blink(lights::towerExtraBall, b(var::lightPhaseTower), blinks::lit);
+    blink(lights::towerExtraBall, b(var::lightPhaseTower), 0x12);
     drop(gates::towerEntry);
     b(var::towerOpen) = kSet;
     stopBlink(lights::tower);
-    blink(lights::tower, 0, blinks::tower);
+    blink(lights::tower, 0, 0x14);
   });
   bindNative(routines::ghostTowerHunt, [this] {  // the tower hunt
     drop(gates::towerEntry);
     b(var::towerHuntStep) = 1;
     b(var::towerHunt) = kSet;
-    w(var::timeoutTowerHunt) = times::towerHunt;
+    w(var::timeoutTowerHunt) = 0x960;
     b(var::musicNext) = songAt::towerHunt;
     lightTower();
   });
 
-  after(timers::vaultEject, times::vaultEject, [this] {
+  after(timers::vaultEject, 0x0a, [this] {
     sfx(sounds::eject);
     b(var::ballHidden) = 0;
     drop(gates::kickback);
     placeBall(spots::vault);
-    w(var::ballVy) = speeds::vaultEjectY;
+    w(var::ballVy) = 0xf4c0;
     w(var::ballVx) = 0;
     b(var::inVault) = 0;
     addTimer(timers::raiseKickback.routine);
     endTimer();
   });
-  after(timers::raiseKickback, times::raiseKickback, [this] {
+  after(timers::raiseKickback, 0x1e, [this] {
     if (b(var::kickback) != kSet) raise(gates::kickback);
     b(var::vaultFromRamp) = 0;
     endTimer();
@@ -1091,7 +1091,7 @@ void StonesNBones::bindRules() {
     if (w(var::timeoutLoopCombo) != 0 && b(var::loopCombo) == 2) award(awards::loopCombo);
     b(var::loopCombo) = 0;
     const bool again = w(var::timeoutTopLoop) != 0;
-    w(var::timeoutTopLoop) = times::topLoop;
+    w(var::timeoutTopLoop) = 0x12c;
     if (again) {
       award(awards::topMillion);
       return;
@@ -1100,7 +1100,7 @@ void StonesNBones::bindRules() {
     scored(points::k10030);
     addBonus(points::k1020);
   });
-  after(timers::unblinkRipAll, times::unblinkRipAll, [this] {
+  after(timers::unblinkRipAll, 0x46, [this] {
     all({lights::rip, lights::rip + 1, lights::rip + 2}, &StonesNBones::stop);
     all({lights::rip, lights::rip + 1, lights::rip + 2}, &StonesNBones::clear);
     b(var::ripBlinking) = 0;
@@ -1119,12 +1119,12 @@ void StonesNBones::bindRules() {
       lightState(l.light) = kSet;
       if (isLit(lights::rip) && isLit(lights::rip + 1) && isLit(lights::rip + 2)) return ripAll();
       addTimer(l.timer);
-      blink(l.light, 0, blinks::flash);
+      blink(l.light, 0, 2);
       b(var::flipperLockRip) = kSet;
     });
     bindNative(l.timer, [this, l] {  // unblinks the lane's light
       if (b(var::ripBlinking) != kSet) {
-        if (!countTo(l.counter, times::unblinkRip)) return;
+        if (!countTo(l.counter, 0x14)) return;
         stopBlink(l.light);
         setLight(l.light);
       } else {
@@ -1134,9 +1134,9 @@ void StonesNBones::bindRules() {
       endTimer();
     });
   }
-  bindNative(routines::rampTopExit, [this] { w(var::timeoutTopLoop) = times::topLoop; });  // down from the top ramp
+  bindNative(routines::rampTopExit, [this] { w(var::timeoutTopLoop) = 0x12c; });  // down from the top ramp
   bindNative(routines::rampScreams, [this] { rampScreams(); });
-  after(timers::screamExtra, times::screamExtra, [this] {  // SCREAM X2: the trip counted again
+  after(timers::screamExtra, 2, [this] {  // SCREAM X2: the trip counted again
     rampScreams();
     endTimer();
   });
@@ -1151,15 +1151,15 @@ void StonesNBones::bindRules() {
         if (b(flag) == kSet) return false;
         b(flag) = kSet;
         stopBlink(which);
-        blink(which, b(var::lightPhaseRight), blinks::leftRamp);
+        blink(which, b(var::lightPhaseRight), 0x10);
         return true;
       };
       light(var::millionPlus, lights::millionPlus);
       light(var::screamX2, lights::screamX2);
-      w(var::timeoutLeftRamp) = times::leftRamp;
-      if (b(var::nextBonusLight) <= lights::bonusX2 + 4 && light(var::wellMultiBonus, lights::wellMultiBonus)) w(var::timeoutMultiBonus) = times::multiBonus;
+      w(var::timeoutLeftRamp) = 0x1c2;
+      if (b(var::nextBonusLight) <= lights::bonusX2 + 4 && light(var::wellMultiBonus, lights::wellMultiBonus)) w(var::timeoutMultiBonus) = 0x23a;
       b(var::loopCombo) = 1;
-      w(var::timeoutLoopCombo) = high() ? times::loopComboHigh : times::loopCombo;
+      w(var::timeoutLoopCombo) = high() ? 0x3a8 : 0x30c;
     }
     drop(gates::rampLeft0);
   });
@@ -1196,10 +1196,10 @@ void StonesNBones::scrollPicture(u16 row) {
   const u16 picture = tallPicture + kLoadSegment;
   const u8 on = lit(), off = unlit();
   for (int plane = 0; plane < 2; ++plane) {
-    const u8 first = plane == 0 ? tall::plane0Left : tall::plane1Left, second = plane == 0 ? tall::plane0Right : tall::plane1Right;
-    u16 from = static_cast<u16>(row * tall::rowBytes), to = tall::drawnAt;
-    for (int r = 0; r < tall::rowsDrawn; ++r, to = static_cast<u16>(to + tall::rowRest))
-      for (int i = 0; i < tall::rowBytes; ++i) {
+    const u8 first = plane == 0 ? 0x80 : 0x20, second = plane == 0 ? 0x08 : 0x02;
+    u16 from = static_cast<u16>(row * 0x28), to = 0xa8;
+    for (int r = 0; r < 0x10; ++r, to = static_cast<u16>(to + 0x58))
+      for (int i = 0; i < 0x28; ++i) {
         const u8 bits = farB(picture, from++);
         dot(plane, to++) = (bits & first) ? on : off;
         dot(plane, to++) = (bits & second) ? on : off;
@@ -1214,7 +1214,7 @@ void StonesNBones::bindSteps() {
     bindNative(at, [this, what] {
       wait1();
       what();
-      nextStep(steps::withWord);
+      nextStep(4);
     });
   };
   simple(routines::clearFlagMode, [this] {  // the mode is over
@@ -1239,21 +1239,21 @@ void StonesNBones::bindSteps() {
     }
     wait1();
     bx = step;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   bindNative(routines::towerEjectStep, [this] {  // the ball out of the tower
     const u16 step = bx;
     addTimer(timers::towerEject.routine);
     wait1();
     bx = step;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   bindNative(routines::wellEjectStep, [this] {  // out of the well
     const u16 step = bx;
     addTimer(timers::wellEject.routine);
     wait1();
     bx = step;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   simple(routines::endGrimReaper, [this] { out(lights::grimReaper); });
   bindNative(routines::vaultEjectStep, [this] {  // out of the vault, unless a mode holds it there
@@ -1262,7 +1262,7 @@ void StonesNBones::bindSteps() {
     b(var::vaultHold) = 0;
     wait1();
     bx = step;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   bindNative(routines::tiltEject, [this] {  // the ball is let go from wherever it is held
     const u16 step = bx;
@@ -1270,19 +1270,19 @@ void StonesNBones::bindSteps() {
     else if (b(var::inTower) == kSet) addTimer(timers::towerEjectNow);
     wait1();
     bx = step;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   bindNative(routines::waitWhileGameStarting, [this] {
     w(var::task) = code::gameStartingTask;
-    w(var::taskState) = tasks::gameStartingFirst;
-    nextStep(steps::withWord);
+    w(var::taskState) = 0x2c;
+    nextStep(4);
   });
-  bindNative(code::gameStartingTask, [this] { si = b(var::playersMayJoin) == kSet ? tasks::gameStartingStill : 0; });
+  bindNative(code::gameStartingTask, [this] { si = b(var::playersMayJoin) == kSet ? 0x22 : 0; });
   bindNative(routines::jccScoreZero, [=, this] {  // go elsewhere if a score is nought
     bool nought = true;
-    for (u16 i = 0; i < kScoreDigits; ++i)
-      if (nativeB(static_cast<u16>(arg(steps::arg1) + i)) != 0) nought = false;
-    bx = nought ? arg(steps::arg2) : static_cast<u16>(bx + steps::withTwoWords);
+    for (u16 i = 0; i < 12; ++i)
+      if (nativeB(static_cast<u16>(arg(2) + i)) != 0) nought = false;
+    bx = nought ? arg(4) : static_cast<u16>(bx + 6);
     if (nativeW(bx) == 0) {
       w(var::nextStep) = 0;
       return;
@@ -1291,15 +1291,15 @@ void StonesNBones::bindSteps() {
     call(nativeW(bx));
   });
   bindNative(routines::jccNoBonusMult, [=, this] {  // go elsewhere if there is no multiplier
-    if (b(var::bonusMultiplier) == 1) return goTo(arg(steps::arg1));
+    if (b(var::bonusMultiplier) == 1) return goTo(arg(2));
     wait1();
-    nextStep(steps::withWord);
+    nextStep(4);
   });
-  bindNative(routines::jump, [=, this] { goTo(arg(steps::arg1)); });
+  bindNative(routines::jump, [=, this] { goTo(arg(2)); });
   bindNative(routines::accBonusModeHit, [this] {
     wait1();
     addScore(var::bonus, var::modeHitScore);
-    nextStep(steps::bare);
+    nextStep(2);
   });
   bindNative(routines::accBonusCyclones, [this] {  // the screams into the bonus
     zero12(var::screamsBonus);
@@ -1308,40 +1308,40 @@ void StonesNBones::bindSteps() {
     if (times == 0) times = 0x10000;  // as the original's loop does with a count of nought
     for (u32 i = 0; i < times; ++i) addScore(var::screamsBonus, points::k100000);
     addScore(var::bonus, var::screamsBonus);
-    nextStep(steps::bare);
+    nextStep(2);
   });
-  simple(routines::setupPartyOn, [this] { b(text::playerDigit1) = static_cast<u8>(b(var::player) + glyph::digit0); });
-  simple(routines::setupShootAgain, [this] { b(text::playerDigit2) = static_cast<u8>(b(var::player) + glyph::digit0); });
+  simple(routines::setupPartyOn, [this] { b(text::playerDigit1) = static_cast<u8>(b(var::player) + 0x37); });
+  simple(routines::setupShootAgain, [this] { b(text::playerDigit2) = static_cast<u8>(b(var::player) + 0x37); });
   bindNative(code::nothingTask, [] {});
   bindNative(routines::setSpecialPlungerEvent, [this] {
     b(var::specialPlungerEvent) = kSet;
     w(var::taskState) = 1;
     w(var::task) = code::nothingTask;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   simple(routines::noop, [] {});
   bindNative(routines::multiplyBonus, [this] {  // the bonus times its multiplier
     copy12(var::bonusOnce, var::bonus);
     for (u8 n = static_cast<u8>(b(var::bonusMultiplier) - 1); n > 0; --n) addScore(var::bonus, var::bonusOnce);
-    b(text::bonusTimes) = glyph::digit0 + 1;  // "10"
-    b(text::bonusTimes + 1) = glyph::digit0;
-    if (const u8 digit = static_cast<u8>(b(var::bonusMultiplier) + glyph::digit0); digit < glyph::digit0 + 10) {
+    b(text::bonusTimes) = 0x37 + 1;  // "10"
+    b(text::bonusTimes + 1) = 0x37;
+    if (const u8 digit = static_cast<u8>(b(var::bonusMultiplier) + 0x37); digit < 0x41) {
       b(text::bonusTimes) = digit;
-      b(text::bonusTimes + 1) = glyph::space;
+      b(text::bonusTimes + 1) = 0x20;
     }
     wait1();
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   bindNative(routines::accBonusModeRamp, [this] {
     wait1();
     addScore(var::bonus, var::modeRampScore);
-    nextStep(steps::bare);
+    nextStep(2);
   });
   bindNative(routines::dmTowerHunt, [=, this] {  // a tall picture rolls down the display to a row of it
-    nativeCW(cvar::scrollTo) = arg(steps::arg1);
-    nativeCW(cvar::scrollRow) = tall::firstRow;
+    nativeCW(cvar::scrollTo) = arg(2);
+    nativeCW(cvar::scrollRow) = 0x98;
     w(var::task) = code::scrollTask;
-    nextStep(steps::withWord);
+    nextStep(4);
   });
   bindNative(code::scrollTask, [this] {
     --nativeCW(cvar::scrollRow);

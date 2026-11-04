@@ -53,25 +53,25 @@ constexpr u16 kDataSegments[4] = {0x19b5, 0x18cf, 0x1896, 0x164d};
 
 }  // namespace
 
-Program::Program(ByteView prg, int table) : table_(table & (kTables - 1)), ds_(mz::segmentBytes, 0), cs_(mz::segmentBytes, 0) {
-  if (prg.size() < mz::leastBytes || prg[0] != 'M' || prg[1] != 'Z') throw DataError("not a table program");
-  const std::size_t header = std::size_t{rd16le(prg, mz::headerParagraphs)} * mz::paragraph;
+Program::Program(ByteView prg, int table) : table_(table & 3), ds_(0x10000, 0), cs_(0x10000, 0) {
+  if (prg.size() < 0x200u || prg[0] != 'M' || prg[1] != 'Z') throw DataError("not a table program");
+  const std::size_t header = std::size_t{rd16le(prg, mz::headerParagraphs)} * 16u;
   dataSegment_ = kDataSegments[table_];
   image_.assign(prg.begin() + static_cast<std::ptrdiff_t>(header), prg.end());
-  image_.resize(image_.size() + mz::segmentBytes, 0);
+  image_.resize(image_.size() + 0x10000u, 0);
   // As DOS does on loading: every segment value the program carries gets the load segment added.
   const std::size_t relocations = rd16le(prg, mz::relocations), table0 = rd16le(prg, mz::relocationTable);
   for (std::size_t i = 0; i < relocations; ++i) {
-    const std::size_t at = std::size_t{rd16le(prg, table0 + i * mz::relocationSize + 2)} * mz::paragraph + rd16le(prg, table0 + i * mz::relocationSize);
+    const std::size_t at = std::size_t{rd16le(prg, table0 + i * 4u + 2)} * 16u + rd16le(prg, table0 + i * 4u);
     if (at + 1 >= image_.size()) continue;
     const u16 v = static_cast<u16>((image_[at] | (image_[at + 1] << 8)) + kLoadSegment);
     image_[at] = static_cast<u8>(v);
     image_[at + 1] = static_cast<u8>(v >> 8);
   }
   auto segment = [&](u16 seg, std::vector<u8>& into) {
-    const std::size_t from = std::size_t{seg} * mz::paragraph;
+    const std::size_t from = std::size_t{seg} * 16u;
     if (from >= image_.size()) throw DataError("table program too short");
-    const std::size_t n = std::min<std::size_t>(mz::segmentBytes, image_.size() - from);
+    const std::size_t n = std::min<std::size_t>(0x10000, image_.size() - from);
     std::copy_n(image_.begin() + static_cast<std::ptrdiff_t>(from), n, into.begin());
   };
   segment(kCodeSegment, cs_);

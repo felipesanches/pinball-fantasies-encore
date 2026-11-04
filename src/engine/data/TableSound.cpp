@@ -16,8 +16,7 @@ struct SoundAddresses {
   u16 silence, plunger, main, attract, warnTilt, tilt, gameOverSad, gameOverHighScore;
   u16 drainedJingle, gameStartJingle, matchStart, matchWin;
 };
-constexpr int kTableCount = 4;
-constexpr SoundAddresses kTables[kTableCount] = {
+constexpr SoundAddresses kTables[4] = {
     // TABLE1.PRG, Party Land
     {.flipper = 0x0c2d, .drained = 0x0c31, .issueBall = 0x0c35, .spring = 0x0c3d, .rollInner = 0x0c49,
      .tickBonus = 0x0c61, .gameStart = 0x0c65, .raiseTargets = 0x0c1d,
@@ -49,9 +48,6 @@ constexpr SoundAddresses kTables[kTableCount] = {
 constexpr u16 soundRecSpare = 2;
 /// The records' sizes: a tune's three bytes, a sound effect's four.
 constexpr std::size_t kTuneRecSize = 3, kSoundRecSize = 4;
-/// What an effect can be: a sample of the module's 31, a note of the driver's 36, on one of
-/// the four channels (counted from nought here).
-constexpr u8 kSamples = 31, kNotes = 36, kLastChannel = 3;
 
 Jingle readJingle(ByteView d, std::size_t at) {
   if (at + kTuneRecSize > d.size()) return {};
@@ -62,7 +58,7 @@ Jingle readJingle(ByteView d, std::size_t at) {
 
 namespace {
 bool plausible(const Sfx& s) {
-  return s.sample >= 1 && s.sample <= kSamples && s.note >= 1 && s.note <= kNotes && s.channel <= kLastChannel;
+  return s.sample >= 1 && s.sample <= 31 && s.note >= 1 && s.note <= 36 && s.channel <= 3;
 }
 }  // namespace
 
@@ -86,7 +82,7 @@ Sfx readSfxNear(ByteView d, std::size_t at) {
 }
 
 TableSounds extractSounds(ByteView d, int tableIndex) {
-  const SoundAddresses& a = kTables[std::clamp(tableIndex, 0, kTableCount - 1)];
+  const SoundAddresses& a = kTables[std::clamp(tableIndex, 0, 3)];
   TableSounds s;
   s.flipper = readSfxNear(d, a.flipper);
   s.drained = readSfxNear(d, a.drained);
